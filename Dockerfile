@@ -9,5 +9,5 @@ COPY backend/ .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Simple, direct start command (Railway best practice)
-CMD python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:$PORT --workers 1 --timeout 120 --log-level debug stockcompass.wsgi:application
+# Railway optimized start command with PORT fallback
+CMD python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:${PORT:-8080} --workers 1 --timeout 120 --log-level debug stockcompass.wsgi:application
