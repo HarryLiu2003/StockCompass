@@ -1,5 +1,4 @@
 [build]
 builder = "DOCKERFILE"
 
-[deploy]
-startCommand = "/app/start.sh"
+# Use Dockerfile CMD - no custom startCommand needed
