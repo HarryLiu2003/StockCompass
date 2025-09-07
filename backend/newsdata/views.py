@@ -2,10 +2,12 @@ from django.http import JsonResponse
 from .message import generate_data_openai
 from django.conf import settings
 from asgiref.sync import async_to_sync
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.response import Response
+from rest_framework.renderers import JSONRenderer
 
 @api_view(['GET'])
+@renderer_classes([JSONRenderer])
 def news_api(request):
     try:
         stockname = request.query_params.get('stockname', 'AAPL')

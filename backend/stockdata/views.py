@@ -1,6 +1,7 @@
 from asgiref.sync import async_to_sync, sync_to_async
-from rest_framework.decorators import api_view
+from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.response import Response
+from rest_framework.renderers import JSONRenderer
 from .utils import *
 from .models import StockData
 from .serializers import StockDataSerializer
@@ -8,6 +9,7 @@ from datetime import datetime
 
 
 @api_view(['GET'])
+@renderer_classes([JSONRenderer])
 def stock_data_api(request):
     # Wrap the async view so that it runs synchronously.
     try:
@@ -77,6 +79,7 @@ async def async_stock_data_api(request):
     return Response(response_data)
 
 @api_view(['POST'])
+@renderer_classes([JSONRenderer])
 def unusual_ranges_api(request):
     """
     API endpoint to calculate unusual date ranges.
@@ -120,6 +123,7 @@ def unusual_ranges_api(request):
             "error": str(e)
         }, status=500)
 @api_view(["GET"])
+@renderer_classes([JSONRenderer])
 def stock_metadata_api(request):
     """
     API endpoint to fetch stock metadata.
