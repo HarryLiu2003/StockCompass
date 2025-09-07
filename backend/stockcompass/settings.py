@@ -25,9 +25,9 @@ load_dotenv()
 SECRET_KEY = 'django-insecure-tu=p!&(^@@=yv8^2ytl=&mjz$du#p)kc&r)=c&$o5+9((-ks^z'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS', 'localhost,127.0.0.1').split(',')
 
 
 # Application definition
@@ -48,6 +48,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Static files for cloud
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -81,11 +82,12 @@ WSGI_APPLICATION = 'stockcompass.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
+import dj_database_url
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    'default': dj_database_url.parse(
+        os.getenv('DATABASE_URL', f'sqlite:///{BASE_DIR / "db.sqlite3"}')
+    )
 }
 
 
@@ -124,26 +126,36 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
 STATIC_URL = 'static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+# WhiteNoise configuration for static files in production
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-NEWS_API_KEYS = os.getenv("NEWS_API_KEYS", "demo").split(",")
-NEWS_API_BASE_URL = os.getenv("NEWS_API_BASE_URL",)
-NEWS_DATA_SOURCE = "ALPHA"
+# Removed unused legacy configurations:
+# - NEWS_API_KEYS (not used, we use SerpAPI)
+# - NEWS_API_BASE_URL (not used, we use SerpAPI) 
+# - NEWS_DATA_SOURCE (not used)
+# - SESSION_ID (not used)
 
-# session
-SESSION_ID = 'DEFAULT_SESSION'
-
-# Development CORS settings
+# CORS settings for development and production
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Next.js default port
+    "http://localhost:3000",  # Next.js development
+    "https://stockcompass.vercel.app",  # Production frontend (update with your actual domain)
 ]
+
+# Allow additional origins from environment variable
+if os.getenv('FRONTEND_URL'):
+    CORS_ALLOWED_ORIGINS.append(os.getenv('FRONTEND_URL'))
 
 CORS_ALLOW_CREDENTIALS = True
 
-# API Keys
-API_PER = os.getenv("API_PER")
-API_OPENAI = os.getenv("API_OPENAI")
+# API Keys for AI services
+API_PER = os.getenv("API_PER")  # Perplexity (fallback for news search)
+API_OPENAI = os.getenv("API_OPENAI")  # OpenAI (legacy fallback)
+API_CLAUDE = os.getenv("API_CLAUDE")  # Claude Sonnet 4 (preferred AI)
+SERPAPI_KEY = os.getenv("SERPAPI_KEY")  # SerpAPI (primary news search)

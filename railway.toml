@@ -1,0 +1,7 @@
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "python backend/manage.py migrate && python backend/manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:$PORT --workers 2 --chdir backend stockcompass.wsgi:application"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

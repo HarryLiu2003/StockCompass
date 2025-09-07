@@ -36,5 +36,11 @@ typing_extensions==4.12.2
 tzdata==2024.2
 urllib3==2.3.0
 webencodings==0.5.1
-yfinance==0.2.52
+yfinance==0.2.65
 openai==1.62.0
+anthropic==0.40.0
+# Cloud deployment dependencies for Railway + Vercel
+psycopg2-binary==2.9.7
+dj-database-url==2.1.0
+whitenoise==6.5.0
+gunicorn==21.2.0
