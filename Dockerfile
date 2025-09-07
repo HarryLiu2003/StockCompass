@@ -9,6 +9,9 @@ COPY backend/ .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Create staticfiles directory to prevent warnings
+RUN mkdir -p /app/staticfiles
+
 # Create a proper startup script
 COPY <<EOF /app/start.sh
 #!/bin/bash
