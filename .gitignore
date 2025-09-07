@@ -1,0 +1,15 @@
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+*.DS_Store
+
+# Common environment files
+.env*
+!.env.example
+
+# Node
+node_modules/
+**/node_modules/backend/.env
