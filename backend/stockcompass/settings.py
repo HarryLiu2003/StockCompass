@@ -82,13 +82,21 @@ WSGI_APPLICATION = 'stockcompass.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.1/ref/settings/#databases
 
-import dj_database_url
-
-DATABASES = {
-    'default': dj_database_url.parse(
-        os.getenv('DATABASE_URL', f'sqlite:///{BASE_DIR / "db.sqlite3"}')
-    )
-}
+# Simple database configuration for Railway
+if os.getenv('DATABASE_URL'):
+    # Production: Use PostgreSQL from Railway
+    import dj_database_url
+    DATABASES = {
+        'default': dj_database_url.parse(os.getenv('DATABASE_URL'))
+    }
+else:
+    # Development: Use SQLite
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 
 # Password validation
