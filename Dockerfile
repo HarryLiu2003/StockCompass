@@ -9,11 +9,8 @@ COPY backend/ .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Collect static files
-RUN python manage.py collectstatic --noinput --clear
-
 # Expose port
 EXPOSE $PORT
 
-# Start command
-CMD python manage.py migrate && gunicorn --bind 0.0.0.0:$PORT --workers 2 stockcompass.wsgi:application
+# Start command (collect static files at runtime when DATABASE_URL is available)
+CMD python manage.py migrate && python manage.py collectstatic --noinput && gunicorn --bind 0.0.0.0:$PORT --workers 2 stockcompass.wsgi:application
