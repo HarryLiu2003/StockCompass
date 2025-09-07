@@ -11,16 +11,8 @@ from datetime import datetime
 @api_view(['GET'])
 @renderer_classes([JSONRenderer])
 def stock_data_api(request):
-    # Wrap the async view so that it runs synchronously.
-    try:
-        return async_to_sync(async_stock_data_api)(request)
-    except Exception as e:
-        # Always return JSON response regardless of Accept header
-        from rest_framework.response import Response
-        return Response({
-            "status_code": 500,
-            "error": str(e)
-        }, status=500, content_type='application/json')
+    """API endpoint to fetch stock data with time series and financial metrics."""
+    return async_to_sync(async_stock_data_api)(request)
 
 async def async_stock_data_api(request):
     try:

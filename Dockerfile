@@ -1,4 +1,4 @@
-# Railway Dockerfile for Django deployment
+# Production Dockerfile for Railway deployment
 FROM python:3.11-slim
 
 WORKDIR /app
@@ -9,29 +9,15 @@ COPY backend/ .
 # Install dependencies
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create staticfiles directory to prevent warnings
+# Create staticfiles directory
 RUN mkdir -p /app/staticfiles
 
-# Create a proper startup script
-COPY <<EOF /app/start.sh
-#!/bin/bash
-set -e
-
-echo "=== Railway Django Startup Debug ==="
-echo "PORT: \$PORT"
-echo "DATABASE_URL: \${DATABASE_URL:0:50}..."
-echo "DEBUG: \$DEBUG"
-
-echo "Running migrations..."
-python manage.py migrate
-
-echo "Testing Django import..."
-python -c "import stockcompass.wsgi; print('WSGI import successful')"
-
-echo "Starting Gunicorn..."
-exec gunicorn --bind 0.0.0.0:\${PORT:-8080} --workers 1 --timeout 120 --log-level info stockcompass.wsgi:application
-EOF
-
-RUN chmod +x /app/start.sh
-
-CMD ["/app/start.sh"]
+# Start command for production
+CMD python manage.py migrate && \
+    python manage.py collectstatic --noinput && \
+    gunicorn --bind 0.0.0.0:${PORT:-8080} \
+             --workers 2 \
+             --timeout 60 \
+             --max-requests 1000 \
+             --max-requests-jitter 100 \
+             stockcompass.wsgi:application

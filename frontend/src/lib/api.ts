@@ -22,7 +22,7 @@ interface NewsData {
   text_summary: string;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "https://stockcompass-production.up.railway.app";
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
 export async function fetchStockData(
   symbol: string = 'AAPL',

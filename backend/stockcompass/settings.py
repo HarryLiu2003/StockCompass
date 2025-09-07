@@ -150,16 +150,12 @@ STATICFILES_FINDERS = [
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-# Removed unused legacy configurations:
-# - NEWS_API_KEYS (not used, we use SerpAPI)
-# - NEWS_API_BASE_URL (not used, we use SerpAPI) 
-# - NEWS_DATA_SOURCE (not used)
-# - SESSION_ID (not used)
+# Clean configuration - unused legacy settings removed
 
 # CORS settings for development and production
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Next.js development
-    "https://stockcompass.vercel.app",  # Production frontend (update with your actual domain)
+    "https://stockcompass.vercel.app",  # Production frontend
 ]
 
 # Allow additional origins from environment variable
@@ -168,8 +164,8 @@ if os.getenv('FRONTEND_URL'):
 
 CORS_ALLOW_CREDENTIALS = True
 
-# API Keys for AI services
-API_PER = os.getenv("API_PER")  # Perplexity (fallback for news search)
-API_OPENAI = os.getenv("API_OPENAI")  # OpenAI (legacy fallback)
-API_CLAUDE = os.getenv("API_CLAUDE")  # Claude Sonnet 4 (preferred AI)
+# API Keys
+API_CLAUDE = os.getenv("API_CLAUDE")    # Claude Sonnet 4 (primary AI)
 SERPAPI_KEY = os.getenv("SERPAPI_KEY")  # SerpAPI (primary news search)
+API_PER = os.getenv("API_PER")          # Perplexity (fallback)
+API_OPENAI = os.getenv("API_OPENAI")    # OpenAI (legacy fallback)

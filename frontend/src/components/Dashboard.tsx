@@ -127,7 +127,7 @@ export default function Dashboard() {
   // NEW: This function fetches data for any ticker: first 1Y, then max, merges, sets state
   async function fetchTickerData(tickerSymbol: string) {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://stockcompass-production.up.railway.app";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
       // 1) Fetch 1Y data
       const response1y = await fetch(`${apiUrl}/api/stockdata/?stockname=${tickerSymbol}&period=1y&interval=1d`);
       const data1y = await response1y.json();
@@ -271,7 +271,7 @@ export default function Dashboard() {
   // Add this function to fetch unusual ranges
   const fetchUnusualRanges = useMemo(() => async () => {
     try {
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "https://stockcompass-production.up.railway.app";
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
 
       // Clear all selection states when fetching new ranges
       setEventRanges([]);
