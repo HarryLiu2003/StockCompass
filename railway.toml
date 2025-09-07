@@ -2,4 +2,4 @@
 builder = "DOCKERFILE"
 
 [deploy]
-startCommand = "python manage.py migrate && gunicorn --bind 0.0.0.0:$PORT --workers 2 stockcompass.wsgi:application"
+startCommand = "/app/start.sh"
