@@ -598,25 +598,23 @@ export default function Dashboard() {
                     <div className="flex-1 min-h-0">
                       <div className="w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
-                          <div 
+                          <LineChart
+                            data={displayChartData}
+                            margin={{
+                              top: 10,
+                              right: 10,
+                              left: 10,
+                              bottom: 10,
+                            }}
+                            onMouseDown={handleChartMouseDown}
+                            onMouseMove={handleChartMouseMove}
+                            onMouseUp={handleChartMouseUp}
                             style={{ 
                               userSelect: isDragging ? 'none' : 'auto',
                               WebkitUserSelect: isDragging ? 'none' : 'auto',
                               MozUserSelect: isDragging ? 'none' : 'auto'
                             } as React.CSSProperties}
                           >
-                            <LineChart
-                              data={displayChartData}
-                              margin={{
-                                top: 10,
-                                right: 10,
-                                left: 10,
-                                bottom: 10,
-                              }}
-                              onMouseDown={handleChartMouseDown}
-                              onMouseMove={handleChartMouseMove}
-                              onMouseUp={handleChartMouseUp}
-                            >
                             <defs>
                               <pattern
                                 id="diagonalPatternRed"
@@ -774,8 +772,7 @@ export default function Dashboard() {
                               dot={false}
                               isAnimationActive={true}
                             />
-                            </LineChart>
-                          </div>
+                          </LineChart>
                         </ResponsiveContainer>
                       </div>
                     </div>
@@ -1081,25 +1078,23 @@ export default function Dashboard() {
                 <div className="flex-1 min-h-0">
                   <div className="w-full h-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <div 
+                      <LineChart
+                        data={displayChartData}
+                        margin={{
+                          top: 10,
+                          right: 10,
+                          left: 10,
+                          bottom: 10,
+                        }}
+                        onMouseDown={handleChartMouseDown}
+                        onMouseMove={handleChartMouseMove}
+                        onMouseUp={handleChartMouseUp}
                         style={{ 
                           userSelect: isDragging ? 'none' : 'auto',
                           WebkitUserSelect: isDragging ? 'none' : 'auto',
                           MozUserSelect: isDragging ? 'none' : 'auto'
                         } as React.CSSProperties}
                       >
-                        <LineChart
-                          data={displayChartData}
-                          margin={{
-                            top: 10,
-                            right: 10,
-                            left: 10,
-                            bottom: 10,
-                          }}
-                          onMouseDown={handleChartMouseDown}
-                          onMouseMove={handleChartMouseMove}
-                          onMouseUp={handleChartMouseUp}
-                        >
                         <defs>
                           <pattern
                             id="diagonalPatternRed"
@@ -1257,8 +1252,7 @@ export default function Dashboard() {
                           dot={false}
                           isAnimationActive={true}
                         />
-                        </LineChart>
-                      </div>
+                      </LineChart>
                     </ResponsiveContainer>
                   </div>
                 </div>
