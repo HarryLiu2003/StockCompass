@@ -21,52 +21,32 @@ async def async_stock_data_api(request):
         period = request.query_params.get('period', '1d')
         interval = request.query_params.get('interval', '60m')
     
-        # Call the async data fetching function with timeout
+        # Fetch and process data in memory (stateless approach)
         import asyncio
-        await asyncio.wait_for(
-            fetch_price_yf(ticker_symbol=stock_name, period=period, interval=interval),
-            timeout=30.0  # 30 second timeout for Yahoo Finance
+        processed_data = await asyncio.wait_for(
+            fetch_and_process_stock_data(ticker_symbol=stock_name, period=period, interval=interval),
+            timeout=60.0  # Increased timeout for processing
         )
+        
+        if not processed_data:
+            return Response({
+                "status_code": 500,
+                "error": "No data available for the specified stock"
+            })
     
-        # Retrieve all stored stock data asynchronously
-        stock_data = await sync_to_async(list)(StockData.objects.all().order_by('timestamp'))
-    
-        # Serialize the data
-        serializer = StockDataSerializer(stock_data, many=True)
-    
-        # Format the data:
-        # - Format time to "YYYY-MM-DD"
-        # - Round numeric fields to 2 decimal places (if not None)
-        time_series = [
-            {
-                "time": datetime.fromisoformat(item["timestamp"].replace('Z','')).strftime("%Y-%m-%d"),
-                "close_price": round(item["close_price"], 2) if item["close_price"] is not None else None,
-                "volume": item["volume"],
-
-            }
-            for item in serializer.data
-        ]
-        fin_data = [
-            {
-                "time": datetime.fromisoformat(item["timestamp"].replace('Z','')).strftime("%Y-%m-%d"),
-                "free_cash_flow": round(item["free_cash_flow"], 3) if item["free_cash_flow"] is not None else None,
-                "eps": round(item["eps"], 2) if item["eps"] is not None else None,
-                "profit_margin": round(item["profit_margin"], 2) if item["profit_margin"] is not None else None,
-                "market_cap": round(item["market_cap"], 2) if item["market_cap"] is not None else None,
-                "pct_change": round(item["pct_change"], 2) if item["pct_change"] is not None else None,
-                "pe": round(item["pe"], 2) if item["pe"] is not None else None,
-            }
-            for item in serializer.data
-        ]
-    
-        # Prepare the final response data
+        # Return processed data immediately (no database storage)
         response_data = {
             "status_code": 200,
-            "time_series": time_series,
-            "fin_data": fin_data,
+            "time_series": processed_data["time_series"],
+            "fin_data": processed_data["fin_data"],
+        }
+        
+    except asyncio.TimeoutError:
+        response_data = {
+            "status_code": 500,
+            "error": "Request timeout - data processing took too long"
         }
     except Exception as e:
-        # If an exception occurs, return an error status and message.
         response_data = {
             "status_code": 500,
             "error": str(e)

@@ -12,6 +12,92 @@ from .models import StockData
 from django.db import connection
 from arch import arch_model
 
+async def fetch_and_process_stock_data(ticker_symbol="AAPL", period="1d", interval="60m"):
+    """
+    Stateless stock data fetching and processing.
+    Fetches data from Yahoo Finance, processes in memory, returns immediately.
+    NO database storage - pure in-memory processing for fast response.
+    """
+    print(f"🚀 Fetching {ticker_symbol} data (stateless mode): period={period}, interval={interval}")
+    
+    # Anti-rate limiting: Random delay before request
+    delay = random.uniform(0.5, 1.5)
+    await asyncio.sleep(delay)
+
+    # Anti-rate limiting: User-Agent rotation
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    ]
+    
+    # Create ticker with custom session
+    ticker = yf.Ticker(ticker_symbol)
+    ticker.session.headers.update({
+        'User-Agent': random.choice(user_agents),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+    })
+
+    try:
+        # Fetch price data
+        print(f"📊 Fetching price history...")
+        price_data = await asyncio.to_thread(ticker.history, period=period, interval=interval)
+        
+        if price_data.empty:
+            print(f"❌ No price data available for {ticker_symbol}")
+            return None
+            
+        print(f"✅ Fetched {len(price_data)} price records for {ticker_symbol}")
+        
+        # Process data in memory (no database storage)
+        from datetime import datetime
+        from django.utils import timezone
+        
+        time_series = []
+        fin_data = []
+        
+        # Calculate percentage change
+        price_data['pct_change'] = price_data['Close'].pct_change().fillna(0) * 100
+        
+        for timestamp, row in price_data.iterrows():
+            # Format timestamp properly
+            dt = timestamp.to_pydatetime()
+            if dt.tzinfo is None:
+                dt = timezone.make_aware(dt, timezone.utc)
+            time_str = dt.strftime("%Y-%m-%d")
+            
+            # Time series data
+            time_series.append({
+                "time": time_str,
+                "close_price": round(float(row['Close']), 2),
+                "volume": int(row['Volume'])
+            })
+            
+            # Financial data  
+            market_cap = float(row['Close']) * int(row['Volume'])
+            fin_data.append({
+                "time": time_str,
+                "free_cash_flow": 0.0,  # Simplified for performance
+                "eps": None,  # Can be added later if needed
+                "profit_margin": None,  # Can be added later if needed
+                "market_cap": round(market_cap, 2),
+                "pct_change": round(float(row['pct_change']), 2),
+                "pe": 0.0  # Simplified for performance
+            })
+        
+        print(f"✅ Processed {len(time_series)} records in memory")
+        
+        return {
+            "time_series": time_series,
+            "fin_data": fin_data
+        }
+        
+    except Exception as e:
+        print(f"❌ Error fetching data for {ticker_symbol}: {e}")
+        return None
+
+# Keep original function for backward compatibility if needed
 async def fetch_price_yf(ticker_symbol="AAPL", period="1d", interval="60m"):
     """
     Asynchronously fetch historical stock data from Yahoo Finance with anti-rate limiting measures.
