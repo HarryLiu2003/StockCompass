@@ -16,9 +16,9 @@ export const metadata: Metadata = {
   title: "StockCompass",
   description: "AI-powered stock analysis and volatility insights",
   icons: {
-    icon: "/compass-logo.svg",
-    shortcut: "/compass-logo.svg",
-    apple: "/compass-logo.svg",
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
   },
 };
 
