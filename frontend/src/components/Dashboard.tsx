@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useMemo } from "react"
-import { Search, CircleUser, ArrowUpCircle, ArrowDownCircle, Radar, X, Loader2, Check, AlertCircle } from "lucide-react"
+import { Search, CircleUser, ArrowUpCircle, ArrowDownCircle, Radar, X, Loader2, Check, AlertCircle, Monitor, Smartphone } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -51,6 +51,28 @@ interface NewsItem {
   // Add other properties as needed
 }
 
+// Custom hook for screen size detection
+function useScreenSize() {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsMobile(window.innerWidth < 1024); // Consider mobile if width < 1024px (lg breakpoint)
+    };
+
+    // Check on mount
+    checkScreenSize();
+
+    // Add event listener
+    window.addEventListener('resize', checkScreenSize);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
+  return { isMobile };
+}
+
 function InvestigatePopup({ x, y }: { x: number; y: number; }) {
   return createPortal(
     <div style={{
@@ -72,6 +94,9 @@ function InvestigatePopup({ x, y }: { x: number; y: number; }) {
 }
 
 export default function Dashboard() {
+  // Screen size detection
+  const { isMobile } = useScreenSize();
+
   // Update the formatDate function to handle UTC dates correctly and add null check
   const formatDate = (date: Date | string | null) => {
     if (!date) return "";
@@ -578,23 +603,6 @@ export default function Dashboard() {
   // 2. Update the state definition with proper typing and prefix
   const [_mappedNewsItems, _setMappedNewsItems] = useState<NewsItem[]>([]);
 
-  // Mobile detection state
-  const [isMobile, setIsMobile] = useState<boolean>(false);
-
-  // Check for mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      const width = window.innerWidth;
-      const userAgent = navigator.userAgent;
-      const isMobileDevice = width <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
-      setIsMobile(isMobileDevice);
-    };
-
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
   // Add cleanup effect
   useEffect(() => {
     if (activeRequest) {
@@ -623,84 +631,82 @@ export default function Dashboard() {
                 StockCompass
               </span>
             </div>
-            <div className="flex items-center gap-3 justify-center w-full max-w-xl mx-auto">
-              <Input
-                type="text"
-                placeholder="Search stocks..."
-                className="w-[400px]" // Increased width from 250px to 400px
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSearch((e.target as HTMLInputElement).value);
-                  }
-                }}
-              />
-              <Button 
-                type="submit" 
-                size="icon"
-                onClick={() => {
-                  // Get the input value from the Input component
-                  const inputEl = document.querySelector('input[type="text"]') as HTMLInputElement;
-                  handleSearch(inputEl.value);
-                }}
-              >
-                <Search className="h-4 w-4" />
-              </Button>
-            </div>
+            {!isMobile && (
+              <div className="flex items-center gap-3 justify-center w-full max-w-xl mx-auto">
+                <Input
+                  type="text"
+                  placeholder="Search stocks..."
+                  className="w-[400px]" // Increased width from 250px to 400px
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      handleSearch((e.target as HTMLInputElement).value);
+                    }
+                  }}
+                />
+                <Button 
+                  type="submit" 
+                  size="icon"
+                  onClick={() => {
+                    // Get the input value from the Input component
+                    const inputEl = document.querySelector('input[type="text"]') as HTMLInputElement;
+                    handleSearch(inputEl.value);
+                  }}
+                >
+                  <Search className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </div>
-          <Button size="icon" variant="secondary" className="rounded-full">
-            <CircleUser className="h-4 w-4" />
-          </Button>
+          {!isMobile && (
+            <Button size="icon" variant="secondary" className="rounded-full">
+              <CircleUser className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </header>
 
-      <main className="flex-1 flex p-8 gap-4 h-[calc(100vh-4rem)] overflow-hidden">
-        {isMobile ? (
-          // Mobile device - show desktop prompt
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-center max-w-md px-6">
-              <div className="mb-6">
-                <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
-                  <svg 
-                    width="32" 
-                    height="32" 
-                    viewBox="0 0 24 24" 
-                    fill="none" 
-                    stroke="currentColor" 
-                    strokeWidth="2"
-                    className="text-primary"
-                  >
-                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
-                    <line x1="8" y1="21" x2="16" y2="21"/>
-                    <line x1="12" y1="17" x2="12" y2="21"/>
-                  </svg>
+      {isMobile ? (
+        // Mobile-only content: Desktop prompt
+        <main className="flex-1 flex items-center justify-center p-8">
+          <Card className="max-w-md w-full">
+            <div className="p-8 text-center space-y-6">
+              <div className="flex justify-center">
+                <div className="relative">
+                  <Monitor className="h-16 w-16 text-primary" />
+                  <div className="absolute -bottom-2 -right-2 bg-background rounded-full p-1">
+                    <Smartphone className="h-6 w-6 text-muted-foreground" />
+                  </div>
                 </div>
               </div>
-              
-              <h2 className="text-2xl font-bold text-foreground mb-4">
-                Desktop Experience Required
-              </h2>
-              
-              <p className="text-muted-foreground mb-6 leading-relaxed">
-                StockCompass provides advanced financial analysis with interactive charts, AI-powered insights, and detailed market data visualization.
-              </p>
-              
-              <p className="text-muted-foreground mb-8 leading-relaxed">
-                For the best experience with complex financial charts and analysis tools, please access StockCompass from a desktop or laptop computer.
-              </p>
-              
-              <div className="bg-muted/50 rounded-lg p-4">
-                <p className="text-sm text-muted-foreground">
-                  <strong className="text-foreground">Features requiring desktop:</strong><br/>
-                  • Interactive stock charts with drag-to-select periods<br/>
-                  • AI-powered volatility analysis<br/>
-                  • Multi-panel financial data visualization<br/>
-                  • Advanced time-series controls
+              <div className="space-y-3">
+                <h2 className="text-2xl font-semibold text-foreground">
+                  Desktop Experience Required
+                </h2>
+                <p className="text-muted-foreground leading-relaxed">
+                  StockCompass provides complex financial data visualization and analysis tools that are optimized for desktop and larger screens.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <p className="text-sm font-medium text-foreground">
+                  For the best experience, please access StockCompass on:
+                </p>
+                <ul className="text-sm text-muted-foreground space-y-1">
+                  <li>• Desktop computer</li>
+                  <li>• Laptop</li>
+                  <li>• Tablet in landscape mode</li>
+                </ul>
+              </div>
+              <div className="pt-4">
+                <p className="text-xs text-muted-foreground">
+                  We&apos;re working on a mobile-optimized version. Thank you for your patience!
                 </p>
               </div>
             </div>
-          </div>
-        ) : (
-          // Desktop - show full application
+          </Card>
+        </main>
+      ) : (
+
+      <main className="flex-1 flex p-8 gap-4 h-[calc(100vh-4rem)] overflow-hidden">
         {selectedInterval ? (
           <div className="flex flex-1 gap-5 h-full">
             <div className={`transition-all duration-200 ${newsPanelActive ? 'flex-1' : 'w-full'}`}>
@@ -1629,9 +1635,10 @@ export default function Dashboard() {
             )}
           </Card>
         )}
-        )}
       </main>
-      {popupPosition && (hoveredEvent || hoveredInterval) && (
+      )}
+      
+      {!isMobile && popupPosition && (hoveredEvent || hoveredInterval) && (
         <InvestigatePopup x={popupPosition.x} y={popupPosition.y} />
       )}
     </div>
