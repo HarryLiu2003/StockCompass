@@ -84,7 +84,12 @@ async def fetch_price_av():
     # Placeholder for async implementation for Alpha Vantage or similar.
     pass
 
+async def unusual_ranges(data):
+    """
+    Asynchronously identify unusual date ranges using a GARCH-based volatility test 
+    and a Central Limit Theorem test on daily price changes.
 
+    Parameters:
         data (dict): Dictionary with keys "time", "price", and optionally "volume".
                      - "time": list of date strings (format "YYYY-MM-DD")
                      - "price": list of price values (floats)
