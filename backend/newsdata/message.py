@@ -112,13 +112,13 @@ if __name__ == "__main__":
 
 def serpapi_news_search(api_key, stock, start_date, end_date):
     """
-    Stateless news search using SerpAPI.
-    Returns news data without database storage.
+    Clean SerpAPI news search for financial data.
+    Searches Google News for stock-related articles in specified date range.
     """
     url = "https://serpapi.com/search"
     query = f"{stock} stock earnings financial news"
     
-    # Convert to Google's date format (MM/DD/YYYY)
+    # Convert to Google's date format (MM/DD/YYYY)  
     start_parts = start_date.split('-')
     end_parts = end_date.split('-')
     start_formatted = f"{start_parts[1]}/{start_parts[2]}/{start_parts[0]}"
@@ -132,8 +132,7 @@ def serpapi_news_search(api_key, stock, start_date, end_date):
         "num": 10,
         "hl": "en",
         "gl": "us",
-        "tbs": f"cdr:1,cd_min:{start_formatted},cd_max:{end_formatted}",
-        "sort": "date"
+        "tbs": f"cdr:1,cd_min:{start_formatted},cd_max:{end_formatted}"
     }
     
     try:
@@ -166,19 +165,28 @@ def serpapi_news_search(api_key, stock, start_date, end_date):
 
 def api_enhancement_request_claude(api_key, stock, start, end, explanations, references):
     """
-    Stateless Claude Sonnet 4 enhancement.
-    No database storage - pure processing.
+    Clean Claude Sonnet 4 financial analysis.
     """
     from anthropic import Anthropic
     
     client = Anthropic(api_key=api_key)
     
-    system_prompt = """You are a financial analyst. Analyze and enhance stock performance explanations. 
-    Return valid JSON: {"explanations": [], "reasons": [], "references": [], "text_summary": ""}"""
+    system_prompt = """You are a world-class financial analyst. Analyze stock performance explanations and provide enhanced insights.
     
-    user_prompt = f"""Analyze {stock} performance during {start} to {end}.
-    Explanations: {explanations}
-    References: {references}"""
+    Return valid JSON format:
+    {
+      "explanations": ["detailed explanation 1", "detailed explanation 2"],
+      "reasons": ["specific reason 1", "specific reason 2"], 
+      "references": ["reference url 1", "reference url 2"],
+      "text_summary": "comprehensive summary of findings"
+    }"""
+    
+    user_prompt = f"""Analyze {stock} stock performance during {start} to {end}.
+
+PROVIDED EXPLANATIONS: {explanations}
+PROVIDED REFERENCES: {references}
+
+Enhance these explanations with specific financial insights, company events, and market factors."""
 
     try:
         response = client.messages.create(
@@ -191,7 +199,7 @@ def api_enhancement_request_claude(api_key, stock, start, end, explanations, ref
         return response.content[0].text
     except Exception as e:
         print(f"Claude API error: {e}")
-        return '{"explanations": [], "reasons": [], "references": [], "text_summary": "Error processing analysis"}'
+        return '{"explanations": [], "reasons": [], "references": [], "text_summary": "Analysis temporarily unavailable"}'
 
 def generate_data_claude_serpapi_stateless(serpapi_key, claude_key, stock, start, end):
     """
