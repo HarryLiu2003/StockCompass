@@ -275,7 +275,7 @@ export default function Dashboard() {
   };
 
   // User-defined period selection functions
-  const handleChartMouseDown = (event: any) => {
+  const handleChartMouseDown = (event: { activeLabel?: string }) => {
     if (!isDefiningPeriod) return;
     
     const activeLabel = event?.activeLabel;
@@ -285,7 +285,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleChartMouseMove = (event: any) => {
+  const handleChartMouseMove = (event: { activeLabel?: string }) => {
     if (!isDefiningPeriod || !dragStart) return;
     
     const activeLabel = event?.activeLabel;
@@ -297,7 +297,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleChartMouseUp = (event: any) => {
+  const handleChartMouseUp = (event: { activeLabel?: string }) => {
     if (!isDefiningPeriod || !dragStart || !previewRange) return;
     
     const activeLabel = event?.activeLabel;
@@ -449,7 +449,7 @@ export default function Dashboard() {
         setActiveRequest(null);
     }
 
-    const clickedEvent = allHighlights.find(event => event.id === eventId);
+    const clickedEvent = eventHighlights.find(event => event.id === eventId);
     if (!clickedEvent) return;
 
     // Clear previous news data and popup when selecting a new event
