@@ -4,6 +4,8 @@ import datetime
 import numpy as np
 import pandas as pd
 import scipy.stats
+import random
+import time
 
 from django.conf import settings
 from .models import StockData
@@ -12,20 +14,12 @@ from arch import arch_model
 
 async def fetch_price_yf(ticker_symbol="AAPL", period="1d", interval="60m"):
     """
-    Asynchronously fetch historical stock data from Yahoo Finance, wipe the existing data,
-    and store the new data in the StockData table. Merged data includes:
-      - Annual Free Cash Flow from ticker.get_cashflow(freq='yearly')
-      - Annual EPS and profit margin from ticker.get_incomestmt() 
-          • EPS is extracted from the "BasicEPS" column
-          • Profit margin is computed as GrossProfit / TotalRevenue
-      - Market Cap computed as Volume * Close
-      - PE Ratio computed as Close / EPS (if EPS is None or 0, then PE is 0)
-      
-    For each historical data row, the free cash flow, EPS, and profit margin values are determined by
-    matching the row’s year with the respective annual data. If a year is not found, EPS and profit margin
-    default to None while free cash flow defaults to 0.
+    Asynchronously fetch historical stock data from Yahoo Finance with anti-rate limiting measures.
     
-    A percentage change column (pct_change) is also computed for the close price.
+    Includes workarounds for cloud IP rate limiting:
+    - User-Agent rotation
+    - Request delays
+    - Retry logic
     
     Parameters:
         ticker_symbol (str): The stock symbol to fetch data for.
@@ -34,13 +28,63 @@ async def fetch_price_yf(ticker_symbol="AAPL", period="1d", interval="60m"):
     """
     # Wipe the entire StockData table asynchronously.
     await asyncio.to_thread(reset_table, StockData)
-    print("Existing stock data wiped from the database (yfinance).")
+    print(f"Existing stock data wiped from the database. Fetching {ticker_symbol} data...")
 
-    # Create a ticker object using yfinance.
+    # Anti-rate limiting: Random delay before request
+    delay = random.uniform(1, 3)
+    print(f"Waiting {delay:.1f}s to avoid rate limiting...")
+    await asyncio.sleep(delay)
+
+    # Anti-rate limiting: User-Agent rotation
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:89.0) Gecko/20100101 Firefox/89.0',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:89.0) Gecko/20100101 Firefox/89.0'
+    ]
+    
+    # Create ticker with custom session
     ticker = yf.Ticker(ticker_symbol)
+    ticker.session.headers.update({
+        'User-Agent': random.choice(user_agents),
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Accept-Encoding': 'gzip, deflate',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1',
+    })
+    
+    print(f"Using User-Agent: {ticker.session.headers['User-Agent'][:50]}...")
 
-    # Fetch historical price data as a pandas DataFrame asynchronously.
-    data = await asyncio.to_thread(ticker.history, period=period, interval=interval)
+    # Fetch historical price data with retry logic
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            print(f"Attempt {attempt + 1}/{max_retries}: Fetching {ticker_symbol} data...")
+            data = await asyncio.to_thread(ticker.history, period=period, interval=interval)
+            
+            if not data.empty:
+                print(f"✅ Successfully fetched {len(data)} data points for {ticker_symbol}")
+                break
+            else:
+                print(f"⚠️ Empty data received for {ticker_symbol}, retrying...")
+                
+        except Exception as e:
+            print(f"❌ Attempt {attempt + 1} failed: {str(e)}")
+            if attempt < max_retries - 1:
+                retry_delay = (attempt + 1) * 5  # 5, 10, 15 second delays
+                print(f"Waiting {retry_delay}s before retry...")
+                await asyncio.sleep(retry_delay)
+            else:
+                print(f"❌ All attempts failed for {ticker_symbol}")
+                # Return empty data structure to prevent crashes
+                import pandas as pd
+                data = pd.DataFrame()
+    
+    if data.empty:
+        print(f"⚠️ No data available for {ticker_symbol}, returning empty response")
+        return
     
     # Compute percentage change for the Close price.
     data['pct_change'] = data['Close'].pct_change(periods=-1).fillna(0) * 100
@@ -275,8 +319,15 @@ async def get_stock_metadata_info(ticker_symbol="AAPL"):
     Returns:
         dict: A dictionary with the extracted information.
     """
-    # Create the Ticker object.
+    # Create the Ticker object with anti-rate limiting
     ticker = yf.Ticker(ticker_symbol)
+    
+    # Apply same anti-rate limiting measures
+    user_agents = [
+        'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+    ]
+    ticker.session.headers.update({'User-Agent': random.choice(user_agents)})
     
     # Run the synchronous call in a separate thread.
     metadata = await asyncio.to_thread(ticker.get_history_metadata)

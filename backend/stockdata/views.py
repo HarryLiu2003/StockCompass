@@ -21,8 +21,12 @@ async def async_stock_data_api(request):
         period = request.query_params.get('period', '1d')
         interval = request.query_params.get('interval', '60m')
     
-        # Call the async data fetching function
-        await fetch_price_yf(ticker_symbol=stock_name, period=period, interval=interval)
+        # Call the async data fetching function with timeout
+        import asyncio
+        await asyncio.wait_for(
+            fetch_price_yf(ticker_symbol=stock_name, period=period, interval=interval),
+            timeout=30.0  # 30 second timeout for Yahoo Finance
+        )
     
         # Retrieve all stored stock data asynchronously
         stock_data = await sync_to_async(list)(StockData.objects.all().order_by('timestamp'))
