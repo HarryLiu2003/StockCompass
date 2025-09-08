@@ -65,7 +65,6 @@ def news_api(request):
         }
         return Response(error_data, status=500)
 
-@api_view(['GET'])
 def news_analysis_stream(request):
     """
     Server-Sent Events endpoint for real-time AI analysis progress.
@@ -136,4 +135,6 @@ def news_analysis_stream(request):
     response['Cache-Control'] = 'no-cache'
     response['Connection'] = 'keep-alive'
     response['Access-Control-Allow-Origin'] = '*'
+    response['Access-Control-Allow-Headers'] = 'Cache-Control'
+    response['X-Accel-Buffering'] = 'no'  # Disable nginx buffering
     return response
