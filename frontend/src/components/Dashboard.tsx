@@ -435,15 +435,40 @@ export default function Dashboard() {
     return { start, end };
   };
 
-  // Initialize reasoning steps matching REAL backend events
+  // Initialize with only first step (sequential progression)
   const initializeReasoningSteps = () => {
-    const steps = [
-      { id: 'serpapi_search', text: `Searching Google News for ${ticker} financial articles`, status: 'pending' as const },
-      { id: 'claude_analysis', text: 'Analyzing market impact with Claude Sonnet 4', status: 'pending' as const },
-      { id: 'json_processing', text: 'Processing and validating analysis results', status: 'pending' as const }
+    const firstStep = [
+      { id: 'serpapi_search', text: `Searching Google News for ${ticker} financial articles`, status: 'running' as const }
     ];
-    setReasoningSteps(steps);
-    return steps;
+    setReasoningSteps(firstStep);
+    return firstStep;
+  };
+
+  // Add next step in sequence
+  const addNextReasoningStep = (completedStepId: string) => {
+    setReasoningSteps(prev => {
+      // Mark current step as completed
+      const updated = prev.map(step => 
+        step.id === completedStepId ? { ...step, status: 'completed' as const } : step
+      );
+      
+      // Add next step based on what just completed
+      if (completedStepId === 'serpapi_search') {
+        updated.push({ 
+          id: 'claude_analysis', 
+          text: 'Analyzing market impact with Claude Sonnet 4', 
+          status: 'running' as const 
+        });
+      } else if (completedStepId === 'claude_analysis') {
+        updated.push({ 
+          id: 'json_processing', 
+          text: 'Processing and validating analysis results', 
+          status: 'running' as const 
+        });
+      }
+      
+      return updated;
+    });
   };
 
 
@@ -472,42 +497,35 @@ export default function Dashboard() {
     setPopupPosition(null);
     setHoveredEvent(null);
 
-    // Start progress tracking and fetch analysis
+    // Start with first step only (sequential progression)
     initializeReasoningSteps();
-    
-    // Simulate progress while actual API call happens
-    const progressInterval = setInterval(() => {
-      setReasoningSteps(prev => {
-        const currentRunning = prev.find(step => step.status === 'running');
-        const currentPending = prev.find(step => step.status === 'pending');
-        
-        if (currentRunning) {
-          // Complete current running step
-          return prev.map(step => 
-            step.status === 'running' ? { ...step, status: 'completed' } : step
-          );
-        } else if (currentPending) {
-          // Start next pending step
-          return prev.map(step => 
-            step.status === 'pending' ? { ...step, status: 'running' } : step
-          );
-        }
-        return prev;
-      });
-    }, 4000); // Update every 4 seconds (realistic timing)
     
     // Create AbortController for the actual API call
     const controller = new AbortController();
     setActiveRequest(controller);
     
-    // Make the actual API call (using working endpoint)
+    // Sequential progress tracking with real API timing
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    
+    // Simulate SerpAPI completion after reasonable time
+    const serpApiTimer = setTimeout(() => {
+      addNextReasoningStep('serpapi_search'); // Complete step 1, add step 2
+    }, 3000); // 3 seconds for SerpAPI search
+    
+    // Simulate Claude analysis start after SerpAPI
+    const claudeTimer = setTimeout(() => {
+      addNextReasoningStep('claude_analysis'); // Complete step 2, add step 3
+    }, 15000); // 15 seconds total (3s SerpAPI + 12s Claude)
+    
+    // Make the actual API call
     fetch(`${apiUrl}/api/news/?stockname=${ticker}&start=${clickedEvent.start}&end=${clickedEvent.end}`, {
       signal: controller.signal
     })
       .then(response => response.json())
       .then(data => {
-        clearInterval(progressInterval);
+        // Clear timers since API completed
+        clearTimeout(serpApiTimer);
+        clearTimeout(claudeTimer);
         
         if (data.status_code === 200 && data.complex) {
           try {
@@ -518,11 +536,12 @@ export default function Dashboard() {
             }
             const parsedResult = JSON.parse(complexString);
             
-            // Complete all steps and show result
+            // Complete final step and show result
             setReasoningSteps(prev => 
               prev.map(step => ({ ...step, status: 'completed' as const }))
             );
             
+            // Show analysis after brief delay
             setTimeout(() => {
               setNewsDetails(parsedResult);
               setIsNewsLoading(false);
@@ -541,7 +560,8 @@ export default function Dashboard() {
         }
       })
       .catch(err => {
-        clearInterval(progressInterval);
+        clearTimeout(serpApiTimer);
+        clearTimeout(claudeTimer);
         if (err.name !== 'AbortError') {
           console.error("Failed to fetch news data:", err);
           setReasoningSteps(prev => 
