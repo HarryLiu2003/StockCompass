@@ -598,18 +598,26 @@ export default function Dashboard() {
                     <div className="flex-1 min-h-0">
                       <div className="w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
-                          <LineChart
-                            data={displayChartData}
-                            margin={{
-                              top: 10,
-                              right: 10,
-                              left: 10,
-                              bottom: 10,
+                          <div 
+                            style={{ 
+                              userSelect: isDragging ? 'none' : 'auto',
+                              WebkitUserSelect: isDragging ? 'none' : 'auto',
+                              MozUserSelect: isDragging ? 'none' : 'auto',
+                              msUserSelect: isDragging ? 'none' : 'auto'
                             }}
-                            onMouseDown={handleChartMouseDown}
-                            onMouseMove={handleChartMouseMove}
-                            onMouseUp={handleChartMouseUp}
                           >
+                            <LineChart
+                              data={displayChartData}
+                              margin={{
+                                top: 10,
+                                right: 10,
+                                left: 10,
+                                bottom: 10,
+                              }}
+                              onMouseDown={handleChartMouseDown}
+                              onMouseMove={handleChartMouseMove}
+                              onMouseUp={handleChartMouseUp}
+                            >
                             <defs>
                               <pattern
                                 id="diagonalPatternRed"
@@ -677,9 +685,6 @@ export default function Dashboard() {
                                     (calculatePriceTrend(displayChartData, event.start, event.end) === "up" ? "#22c55e66" : "#ef444466")
                                   }
                                   fillOpacity={isSelected ? 1 : (isHovered ? 0.6 : 0.4)}
-                                  stroke={event.type === 'user' ? '#3b82f6' : undefined}
-                                  strokeWidth={event.type === 'user' ? 2 : undefined}
-                                  strokeDasharray={event.type === 'user' ? '3,3' : undefined}
                                   onClick={() => { if (!isSelected) handleEventClick(event.id); }}
                                   onMouseEnter={(e) => { if (!isSelected) { setHoveredEvent(event.id); setPopupPosition({ x: e.pageX, y: e.pageY }); }}}
                                   onMouseMove={(e) => { if (!isSelected) setPopupPosition({ x: e.pageX, y: e.pageY }); }}
@@ -770,7 +775,8 @@ export default function Dashboard() {
                               dot={false}
                               isAnimationActive={true}
                             />
-                          </LineChart>
+                            </LineChart>
+                          </div>
                         </ResponsiveContainer>
                       </div>
                     </div>
@@ -1076,18 +1082,26 @@ export default function Dashboard() {
                 <div className="flex-1 min-h-0">
                   <div className="w-full h-full">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart
-                        data={displayChartData}
-                        margin={{
-                          top: 10,
-                          right: 10,
-                          left: 10,
-                          bottom: 10,
+                      <div 
+                        style={{ 
+                          userSelect: isDragging ? 'none' : 'auto',
+                          WebkitUserSelect: isDragging ? 'none' : 'auto',
+                          MozUserSelect: isDragging ? 'none' : 'auto',
+                          msUserSelect: isDragging ? 'none' : 'auto'
                         }}
-                        onMouseDown={handleChartMouseDown}
-                        onMouseMove={handleChartMouseMove}
-                        onMouseUp={handleChartMouseUp}
                       >
+                        <LineChart
+                          data={displayChartData}
+                          margin={{
+                            top: 10,
+                            right: 10,
+                            left: 10,
+                            bottom: 10,
+                          }}
+                          onMouseDown={handleChartMouseDown}
+                          onMouseMove={handleChartMouseMove}
+                          onMouseUp={handleChartMouseUp}
+                        >
                         <defs>
                           <pattern
                             id="diagonalPatternRed"
@@ -1155,9 +1169,6 @@ export default function Dashboard() {
                                 (calculatePriceTrend(displayChartData, event.start, event.end) === "up" ? "#22c55e66" : "#ef444466")
                               }
                               fillOpacity={isSelected ? 1 : (isHovered ? 0.6 : 0.4)}
-                              stroke={event.type === 'user' ? '#3b82f6' : undefined}
-                              strokeWidth={event.type === 'user' ? 2 : undefined}
-                              strokeDasharray={event.type === 'user' ? '3,3' : undefined}
                               onClick={() => { if (!isSelected) handleEventClick(event.id); }}
                               onMouseEnter={(e) => { if (!isSelected) { setHoveredEvent(event.id); setPopupPosition({ x: e.pageX, y: e.pageY }); }}}
                               onMouseMove={(e) => { if (!isSelected) setPopupPosition({ x: e.pageX, y: e.pageY }); }}
@@ -1248,7 +1259,8 @@ export default function Dashboard() {
                           dot={false}
                           isAnimationActive={true}
                         />
-                      </LineChart>
+                        </LineChart>
+                      </div>
                     </ResponsiveContainer>
                   </div>
                 </div>
