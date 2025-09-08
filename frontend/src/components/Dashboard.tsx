@@ -455,87 +455,6 @@ export default function Dashboard() {
     );
   };
 
-  // Real-time AI reasoning progress using Server-Sent Events
-  const trackRealTimeProgress = (stockname: string, start: string, end: string) => {
-    initializeReasoningSteps();
-    
-    // Connect to Server-Sent Events endpoint for real backend progress
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-    const eventSource = new EventSource(
-      `${apiUrl}/api/news/stream/?stockname=${stockname}&start=${start}&end=${end}`
-    );
-    
-    eventSource.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data);
-        
-        switch (data.step) {
-          case 'connected':
-            console.log('Connected to real-time AI analysis stream');
-            break;
-            
-          case 'serpapi_search':
-            if (data.status === 'running') {
-              updateReasoningStep('serpapi_search', 'running');
-            } else if (data.status === 'completed') {
-              updateReasoningStep('serpapi_search', 'completed');
-            }
-            break;
-            
-          case 'claude_analysis':
-            if (data.status === 'running') {
-              updateReasoningStep('claude_analysis', 'running');
-            } else if (data.status === 'completed') {
-              updateReasoningStep('claude_analysis', 'completed');
-            }
-            break;
-            
-          case 'json_processing':
-            if (data.status === 'running') {
-              updateReasoningStep('json_processing', 'running');
-            } else if (data.status === 'completed') {
-              updateReasoningStep('json_processing', 'completed');
-            }
-            break;
-            
-          case 'complete':
-            // Parse and set the final result
-            try {
-              const result = JSON.parse(data.result);
-              setNewsDetails(result);
-              setIsNewsLoading(false);
-              setReasoningSteps([]);
-            } catch (parseError) {
-              console.error('Error parsing final result:', parseError);
-              setIsNewsLoading(false);
-            }
-            eventSource.close();
-            break;
-            
-          case 'error':
-            console.error('Analysis error:', data.message);
-            setReasoningSteps(prev => 
-              prev.map(step => 
-                step.status === 'running' ? { ...step, status: 'error' as const } : step
-              )
-            );
-            setIsNewsLoading(false);
-            eventSource.close();
-            break;
-        }
-      } catch (parseError) {
-        console.error('Error parsing SSE data:', parseError);
-      }
-    };
-    
-    eventSource.onerror = (error) => {
-      console.error('SSE connection error:', error);
-      eventSource.close();
-      setIsNewsLoading(false);
-    };
-    
-    return eventSource;
-  };
 
   // Update the handleEventClick function
   const handleEventClick = (eventId: string) => {
@@ -561,11 +480,86 @@ export default function Dashboard() {
     setPopupPosition(null);
     setHoveredEvent(null);
 
-    // Start real-time progress tracking with Server-Sent Events
-    const eventSource = trackRealTimeProgress(ticker, clickedEvent.start, clickedEvent.end);
+    // Start progress tracking and fetch analysis
+    initializeReasoningSteps();
     
-    // Store event source for cleanup
-    setActiveRequest({ abort: () => eventSource.close() } as AbortController);
+    // Simulate progress while actual API call happens
+    const progressInterval = setInterval(() => {
+      setReasoningSteps(prev => {
+        const currentRunning = prev.find(step => step.status === 'running');
+        const currentPending = prev.find(step => step.status === 'pending');
+        
+        if (currentRunning) {
+          // Complete current running step
+          return prev.map(step => 
+            step.status === 'running' ? { ...step, status: 'completed' } : step
+          );
+        } else if (currentPending) {
+          // Start next pending step
+          return prev.map(step => 
+            step.status === 'pending' ? { ...step, status: 'running' } : step
+          );
+        }
+        return prev;
+      });
+    }, 3000); // Update every 3 seconds
+    
+    // Create AbortController for the actual API call
+    const controller = new AbortController();
+    setActiveRequest(controller);
+    
+    // Make the actual API call (using working endpoint)
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    fetch(`${apiUrl}/api/news/?stockname=${ticker}&start=${clickedEvent.start}&end=${clickedEvent.end}`, {
+      signal: controller.signal
+    })
+      .then(response => response.json())
+      .then(data => {
+        clearInterval(progressInterval);
+        
+        if (data.status_code === 200 && data.complex) {
+          try {
+            // Parse the Claude analysis
+            let complexString = data.complex;
+            if (complexString.startsWith('```json')) {
+              complexString = complexString.replace(/^```json\n/, '').replace(/\n```$/, '');
+            }
+            const parsedResult = JSON.parse(complexString);
+            
+            // Complete all steps and show result
+            setReasoningSteps(prev => 
+              prev.map(step => ({ ...step, status: 'completed' as const }))
+            );
+            
+            setTimeout(() => {
+              setNewsDetails(parsedResult);
+              setIsNewsLoading(false);
+              setReasoningSteps([]);
+            }, 1000);
+            
+          } catch (parseError) {
+            console.error('Error parsing analysis:', parseError);
+            setIsNewsLoading(false);
+            setReasoningSteps([]);
+          }
+        } else {
+          console.error('API error:', data);
+          setIsNewsLoading(false);
+          setReasoningSteps([]);
+        }
+      })
+      .catch(err => {
+        clearInterval(progressInterval);
+        if (err.name !== 'AbortError') {
+          console.error("Failed to fetch news data:", err);
+          setReasoningSteps(prev => 
+            prev.map(step => 
+              step.status === 'running' ? { ...step, status: 'error' as const } : step
+            )
+          );
+          setIsNewsLoading(false);
+        }
+      });
   };
 
   // 2. Update the state definition with proper typing and prefix
