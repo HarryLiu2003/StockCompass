@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { useState, useEffect, useMemo } from "react"
-import { Search, CircleUser, ArrowUpCircle, ArrowDownCircle, Radar, X } from "lucide-react"
+import { Search, CircleUser, ArrowUpCircle, ArrowDownCircle, Radar, X, Loader2, Check, AlertCircle } from "lucide-react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -366,6 +366,13 @@ export default function Dashboard() {
   // Add news-related state variables:
   const [newsDetails, setNewsDetails] = useState<NewsData | null>(null);
   const [isNewsLoading, setIsNewsLoading] = useState<boolean>(false);
+  
+  // AI reasoning steps state
+  const [reasoningSteps, setReasoningSteps] = useState<Array<{
+    id: string;
+    text: string;
+    status: 'pending' | 'running' | 'completed' | 'error';
+  }>>([]);
 
   // Add this to your state declarations
   const [clickedEvent, setClickedEvent] = useState<{start: string, end: string} | null>(null);
@@ -429,10 +436,73 @@ export default function Dashboard() {
     return { start, end };
   };
 
+  // Initialize reasoning steps based on actual AI pipeline
+  const initializeReasoningSteps = () => {
+    const steps = [
+      { id: 'serpapi_search', text: 'Searching Google News with SerpAPI for financial articles', status: 'pending' as const },
+      { id: 'date_filtering', text: `Filtering articles from ${clickedEvent?.start} to ${clickedEvent?.end}`, status: 'pending' as const },
+      { id: 'content_extraction', text: 'Extracting article titles, snippets, and source links', status: 'pending' as const },
+      { id: 'financial_filtering', text: 'Identifying financially relevant news events', status: 'pending' as const },
+      { id: 'claude_analysis', text: 'Analyzing market impact with Claude Sonnet 4', status: 'pending' as const },
+      { id: 'correlation_analysis', text: 'Correlating news events with stock price movements', status: 'pending' as const },
+      { id: 'explanation_synthesis', text: 'Generating comprehensive explanations and insights', status: 'pending' as const },
+      { id: 'reference_validation', text: 'Validating and organizing source references', status: 'pending' as const }
+    ];
+    setReasoningSteps(steps);
+    return steps;
+  };
+
+  // Update reasoning step status
+  const updateReasoningStep = (stepId: string, status: 'running' | 'completed' | 'error') => {
+    setReasoningSteps(prev => 
+      prev.map(step => 
+        step.id === stepId ? { ...step, status } : step
+      )
+    );
+  };
+
+  // Enhanced AI reasoning progress with realistic backend timing
+  const simulateReasoningProgress = async () => {
+    const steps = initializeReasoningSteps();
+    
+    // Step 1-4: SerpAPI Processing (fast, parallel-ish)
+    updateReasoningStep('serpapi_search', 'running');
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    updateReasoningStep('serpapi_search', 'completed');
+    
+    updateReasoningStep('date_filtering', 'running');
+    await new Promise(resolve => setTimeout(resolve, 600));
+    updateReasoningStep('date_filtering', 'completed');
+    
+    updateReasoningStep('content_extraction', 'running');
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    updateReasoningStep('content_extraction', 'completed');
+    
+    updateReasoningStep('financial_filtering', 'running');
+    await new Promise(resolve => setTimeout(resolve, 800));
+    updateReasoningStep('financial_filtering', 'completed');
+    
+    // Step 5-8: Claude Analysis (longer, sequential)
+    updateReasoningStep('claude_analysis', 'running');
+    await new Promise(resolve => setTimeout(resolve, 10000)); // Claude's main processing
+    updateReasoningStep('claude_analysis', 'completed');
+    
+    updateReasoningStep('correlation_analysis', 'running');
+    await new Promise(resolve => setTimeout(resolve, 1800));
+    updateReasoningStep('correlation_analysis', 'completed');
+    
+    updateReasoningStep('explanation_synthesis', 'running');
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    updateReasoningStep('explanation_synthesis', 'completed');
+    
+    updateReasoningStep('reference_validation', 'running');
+    await new Promise(resolve => setTimeout(resolve, 800));
+    updateReasoningStep('reference_validation', 'completed');
+  };
+
   // Update the handleEventClick function
   const handleEventClick = (eventId: string) => {
     if (selectedEventId === eventId) {
-        // If the event is already selected, do nothing
         return;
     }
 
@@ -445,7 +515,7 @@ export default function Dashboard() {
     const clickedEvent = eventHighlights.find(event => event.id === eventId);
     if (!clickedEvent) return;
 
-    // Clear previous news data and popup when selecting a new event
+    // Clear previous data and setup new analysis
     setNewsDetails(null);
     setClickedEvent(clickedEvent);
     setSelectedEventId(eventId);
@@ -453,6 +523,9 @@ export default function Dashboard() {
     setIsNewsLoading(true);
     setPopupPosition(null);
     setHoveredEvent(null);
+
+    // Start reasoning steps display
+    simulateReasoningProgress();
 
     // Create new AbortController for this request
     const controller = new AbortController();
@@ -470,17 +543,23 @@ export default function Dashboard() {
         .then(fetchedNews => {
             setNewsDetails(fetchedNews);
             setIsNewsLoading(false);
+            // Clear reasoning steps when analysis is complete
+            setReasoningSteps([]);
         })
         .catch(err => {
-            // Don't update state if the request was aborted
             if (err.name !== 'AbortError') {
                 console.error("Failed to fetch news data:", err);
                 setNewsDetails(null);
                 setIsNewsLoading(false);
+                // Mark current step as error
+                setReasoningSteps(prev => 
+                  prev.map(step => 
+                    step.status === 'running' ? { ...step, status: 'error' as const } : step
+                  )
+                );
             }
         })
         .finally(() => {
-            // Clear the active request if it's the current one
             setActiveRequest(prev => 
                 prev?.signal === controller.signal ? null : prev
             );
@@ -663,8 +742,8 @@ export default function Dashboard() {
                                 fill="#9ca3af"
                                 fillOpacity={0.3}
                                 stroke="#6b7280"
-                                strokeWidth={2}
-                                strokeDasharray="5,5"
+                                strokeWidth={1}
+                                strokeDasharray="3,2"
                               />
                             )}
                             
@@ -983,10 +1062,53 @@ export default function Dashboard() {
                     style={{ '--scrollbar-width': '8px' } as React.CSSProperties}
                   >
                     {isNewsLoading ? (
-                      <div className="flex items-center justify-center h-full">
-                        <div 
-                          className="w-6 h-6 border-2 border-primary border-t-transparent rounded-full animate-spin" 
-                        />
+                      <div className="space-y-4 p-4">
+                        <div className="mb-4">
+                          <h3 className="text-lg font-semibold mb-2">AI Analysis in Progress</h3>
+                          <p className="text-sm text-muted-foreground">
+                            Analyzing market volatility with Claude Sonnet 4 and real-time news data
+                          </p>
+                        </div>
+                        
+                        <div className="space-y-3">
+                          {reasoningSteps.map((step, index) => (
+                            <div 
+                              key={step.id} 
+                              className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ${
+                                step.status === 'running' ? 'bg-blue-50 border border-blue-200' : 
+                                step.status === 'completed' ? 'bg-green-50 border border-green-200' : 
+                                step.status === 'error' ? 'bg-red-50 border border-red-200' : 
+                                'bg-gray-50 border border-gray-200'
+                              }`}
+                            >
+                              <div className="flex-shrink-0">
+                                {step.status === 'running' && (
+                                  <Loader2 className="w-4 h-4 animate-spin text-blue-600" />
+                                )}
+                                {step.status === 'completed' && (
+                                  <Check className="w-4 h-4 text-green-600" />
+                                )}
+                                {step.status === 'error' && (
+                                  <AlertCircle className="w-4 h-4 text-red-600" />
+                                )}
+                                {step.status === 'pending' && (
+                                  <div className="w-4 h-4 rounded-full border-2 border-gray-300" />
+                                )}
+                              </div>
+                              
+                              <div className="flex-1">
+                                <p className={`text-sm font-medium ${
+                                  step.status === 'running' ? 'text-blue-700' : 
+                                  step.status === 'completed' ? 'text-green-700' : 
+                                  step.status === 'error' ? 'text-red-700' : 
+                                  'text-gray-500'
+                                }`}>
+                                  {step.text}
+                                </p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ) : (
                       <>
@@ -1143,8 +1265,8 @@ export default function Dashboard() {
                             fill="#9ca3af"
                             fillOpacity={0.3}
                             stroke="#6b7280"
-                            strokeWidth={2}
-                            strokeDasharray="5,5"
+                            strokeWidth={1}
+                            strokeDasharray="3,2"
                           />
                         )}
                         
