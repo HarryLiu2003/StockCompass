@@ -602,9 +602,8 @@ export default function Dashboard() {
                             style={{ 
                               userSelect: isDragging ? 'none' : 'auto',
                               WebkitUserSelect: isDragging ? 'none' : 'auto',
-                              MozUserSelect: isDragging ? 'none' : 'auto',
-                              msUserSelect: isDragging ? 'none' : 'auto'
-                            }}
+                              MozUserSelect: isDragging ? 'none' : 'auto'
+                            } as React.CSSProperties}
                           >
                             <LineChart
                               data={displayChartData}
@@ -1086,9 +1085,8 @@ export default function Dashboard() {
                         style={{ 
                           userSelect: isDragging ? 'none' : 'auto',
                           WebkitUserSelect: isDragging ? 'none' : 'auto',
-                          MozUserSelect: isDragging ? 'none' : 'auto',
-                          msUserSelect: isDragging ? 'none' : 'auto'
-                        }}
+                          MozUserSelect: isDragging ? 'none' : 'auto'
+                        } as React.CSSProperties}
                       >
                         <LineChart
                           data={displayChartData}
