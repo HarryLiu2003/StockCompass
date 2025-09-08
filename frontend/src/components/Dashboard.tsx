@@ -11,7 +11,6 @@ import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group"
 import { Slider } from "@/components/ui/slider"
 import Image from 'next/image'
 import { LineChart, Line, ResponsiveContainer, CartesianGrid, XAxis, YAxis, Tooltip, ReferenceArea } from "recharts"
-import { fetchNewsData } from "@/lib/api"
 import { createPortal } from "react-dom"
 
 interface NewsData {
@@ -458,7 +457,7 @@ export default function Dashboard() {
 
   // Real-time AI reasoning progress using Server-Sent Events
   const trackRealTimeProgress = (stockname: string, start: string, end: string) => {
-    const steps = initializeReasoningSteps();
+    initializeReasoningSteps();
     
     // Connect to Server-Sent Events endpoint for real backend progress
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
@@ -1074,7 +1073,7 @@ export default function Dashboard() {
                         </div>
                         
                         <div className="space-y-3">
-                          {reasoningSteps.map((step, index) => (
+                          {reasoningSteps.map((step) => (
                             <div 
                               key={step.id} 
                               className={`flex items-center gap-3 p-3 rounded-lg transition-all duration-300 ${
