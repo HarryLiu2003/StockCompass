@@ -155,7 +155,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # CORS settings for development and production
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",  # Next.js development
-    "https://stockcompass.vercel.app",  # Production frontend
+    "https://www.stockcompass.app",  # Production frontend (custom domain)
+    "https://stockcompass.vercel.app",  # Vercel default domain (backup)
 ]
 
 # Allow additional origins from environment variable
