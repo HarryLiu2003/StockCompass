@@ -37,12 +37,12 @@ async def fetch_and_process_stock_data(ticker_symbol="AAPL", period="1d", interv
         info = await asyncio.to_thread(lambda: ticker.info)
         
         # Extract real financial metrics using correct yfinance field identifiers
-        market_cap = info.get('marketCap', None)  # Real market cap from yfinance
-        trailing_pe = info.get('trailingPE', None)  # Real P/E ratio (TTM)
-        trailing_eps = info.get('trailingEps', None)  # Real EPS (TTM)
-        beta = info.get('beta', None)  # Beta (5Y Monthly) - available but not displayed
+        market_cap_base = info.get('marketCap', None)  # Base market cap
+        trailing_pe_base = info.get('trailingPE', None)  # Base P/E ratio (TTM)
+        trailing_eps = info.get('trailingEps', None)  # EPS (same for all days)
+        shares_outstanding = info.get('sharesOutstanding', None)  # For market cap calculation
         
-        print(f"📊 Financial metrics - Market Cap: {market_cap}, P/E: {trailing_pe}, EPS: {trailing_eps}")
+        print(f"📊 Base financial metrics - Market Cap: {market_cap_base}, P/E: {trailing_pe_base}, EPS: {trailing_eps}")
         
         # Process data in memory (no database storage)
         from datetime import datetime
@@ -61,22 +61,28 @@ async def fetch_and_process_stock_data(ticker_symbol="AAPL", period="1d", interv
                 dt = timezone.make_aware(dt, timezone.utc)
             time_str = dt.strftime("%Y-%m-%d")
             
+            current_price = float(row['Close'])
+            
             # Time series data
             time_series.append({
                 "time": time_str,
-                "close_price": round(float(row['Close']), 2),
+                "close_price": round(current_price, 2),
                 "volume": int(row['Volume'])
             })
             
-            # Financial data with REAL metrics from yfinance
+            # Calculate time series financial metrics
+            # Market Cap = Current Price × Shares Outstanding (changes with price)
+            daily_market_cap = (current_price * shares_outstanding) if shares_outstanding else market_cap_base
+            
+            # P/E Ratio = Current Price ÷ EPS (changes with price)  
+            daily_pe = (current_price / trailing_eps) if trailing_eps and trailing_eps > 0 else trailing_pe_base
+            
             fin_data.append({
                 "time": time_str,
-                "free_cash_flow": 0.0,  # Simplified for performance
-                "eps": trailing_eps,  # Real EPS from ticker.info
-                "profit_margin": None,  # Can be added later if needed
-                "market_cap": market_cap,  # Real market cap from ticker.info
+                "eps": trailing_eps,  # EPS stays same (company metric)
+                "market_cap": daily_market_cap,  # Changes with stock price
                 "pct_change": round(float(row['pct_change']), 2),
-                "pe": trailing_pe  # Real P/E from ticker.info
+                "pe": daily_pe  # Changes with stock price
             })
         
         print(f"✅ Processed {len(time_series)} records with real financial metrics")
