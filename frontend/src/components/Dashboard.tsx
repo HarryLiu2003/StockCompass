@@ -950,13 +950,12 @@ export default function Dashboard() {
                     <div className="text-sm font-medium text-muted-foreground">Market Cap</div>
                     {(() => {
                       const lastItem = displayChartData[displayChartData.length - 1];
-                      if (!lastItem?.close_price || !lastItem?.volume) {
+                      if (!lastItem?.market_cap || lastItem.market_cap === null) {
                         return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                       }
-                      const marketCap = lastItem.close_price * lastItem.volume;
                       return (
                         <div className="text-3xl font-semibold">
-                          {marketCap.toLocaleString("en-US", {
+                          {lastItem.market_cap.toLocaleString("en-US", {
                             style: "currency",
                             currency: "USD",
                             notation: "compact",
@@ -986,18 +985,11 @@ export default function Dashboard() {
                     <div className="text-sm font-medium text-muted-foreground">P/E (TTM)</div>
                     {(() => {
                       const lastItem = displayChartData[displayChartData.length - 1];
-                      // Calculate TTM EPS using the last 4 quarters
-                      const ttmEarnings = displayChartData
-                        .slice(-252) // Approximate trading days in a year
-                        .reduce((sum, item) => sum + (item.earnings || 0), 0);
-                      
-                      if (!lastItem?.close_price || ttmEarnings === 0) {
+                      if (!lastItem?.pe || lastItem.pe === null || lastItem.pe === 0) {
                         return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                       }
-                      
-                      const pe = lastItem.close_price / (ttmEarnings / lastItem.volume);
                       return (
-                        <div className="text-3xl font-semibold">{pe.toFixed(2)}</div>
+                        <div className="text-3xl font-semibold">{lastItem.pe.toFixed(2)}</div>
                       );
                     })()}
                   </div>
@@ -1006,19 +998,12 @@ export default function Dashboard() {
                     <div className="text-sm font-medium text-muted-foreground">EPS (TTM)</div>
                     {(() => {
                       const lastItem = displayChartData[displayChartData.length - 1];
-                      // Calculate TTM EPS
-                      const ttmEarnings = displayChartData
-                        .slice(-252) // Approximate trading days in a year
-                        .reduce((sum, item) => sum + (item.earnings || 0), 0);
-                      
-                      if (!lastItem?.volume || ttmEarnings === 0) {
+                      if (!lastItem?.eps || lastItem.eps === null) {
                         return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                       }
-                      
-                      const eps = ttmEarnings / lastItem.volume;
                       return (
                         <div className="text-3xl font-semibold">
-                          {eps.toFixed(2)}
+                          {lastItem.eps.toFixed(2)}
                         </div>
                       );
                     })()}
@@ -1473,13 +1458,12 @@ export default function Dashboard() {
                 <div className="text-sm font-medium text-muted-foreground">Market Cap</div>
                 {(() => {
                   const lastItem = displayChartData[displayChartData.length - 1];
-                  if (!lastItem?.close_price || !lastItem?.volume) {
+                  if (!lastItem?.market_cap || lastItem.market_cap === null) {
                     return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                   }
-                  const marketCap = lastItem.close_price * lastItem.volume;
                   return (
                     <div className="text-3xl font-semibold">
-                      {marketCap.toLocaleString("en-US", {
+                      {lastItem.market_cap.toLocaleString("en-US", {
                         style: "currency",
                         currency: "USD",
                         notation: "compact",
@@ -1509,18 +1493,11 @@ export default function Dashboard() {
                 <div className="text-sm font-medium text-muted-foreground">P/E (TTM)</div>
                 {(() => {
                   const lastItem = displayChartData[displayChartData.length - 1];
-                  // Calculate TTM EPS using the last 4 quarters
-                  const ttmEarnings = displayChartData
-                    .slice(-252) // Approximate trading days in a year
-                    .reduce((sum, item) => sum + (item.earnings || 0), 0);
-                  
-                  if (!lastItem?.close_price || ttmEarnings === 0) {
+                  if (!lastItem?.pe || lastItem.pe === null || lastItem.pe === 0) {
                     return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                   }
-                  
-                  const pe = lastItem.close_price / (ttmEarnings / lastItem.volume);
                   return (
-                    <div className="text-3xl font-semibold">{pe.toFixed(2)}</div>
+                    <div className="text-3xl font-semibold">{lastItem.pe.toFixed(2)}</div>
                   );
                 })()}
               </div>
@@ -1529,19 +1506,12 @@ export default function Dashboard() {
                 <div className="text-sm font-medium text-muted-foreground">EPS (TTM)</div>
                 {(() => {
                   const lastItem = displayChartData[displayChartData.length - 1];
-                  // Calculate TTM EPS
-                  const ttmEarnings = displayChartData
-                    .slice(-252) // Approximate trading days in a year
-                    .reduce((sum, item) => sum + (item.earnings || 0), 0);
-                  
-                  if (!lastItem?.volume || ttmEarnings === 0) {
+                  if (!lastItem?.eps || lastItem.eps === null) {
                     return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                   }
-                  
-                  const eps = ttmEarnings / lastItem.volume;
                   return (
                     <div className="text-3xl font-semibold">
-                      {eps.toFixed(2)}
+                      {lastItem.eps.toFixed(2)}
                     </div>
                   );
                 })()}
