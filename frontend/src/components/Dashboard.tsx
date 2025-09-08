@@ -108,21 +108,21 @@ export default function Dashboard() {
   const [intervalStartDate, setIntervalStartDate] = useState<Date | null>(null);
   const [intervalError, setIntervalError] = useState<string>("");
   const [sliderValue, setSliderValue] = useState<number>(100);
-  // Unified period system - contains ALL periods (auto + user-defined)
-  const [eventRanges, setEventRanges] = useState<Array<{ start: string; end: string; source: 'auto' | 'user' }>>([]);
+  const [eventRanges, setEventRanges] = useState<Array<{ start: string; end: string; type: 'auto' | 'user' }>>([]);
   const [showEventHighlights, setShowEventHighlights] = useState<boolean>(false);
   const [hoveredEvent, setHoveredEvent] = useState<string | null>(null);
   const [popupPosition, setPopupPosition] = useState<{ x: number, y: number } | null>(null);
   
-  // Period definition state
+  // User-defined period selection state
   const [isDefiningPeriod, setIsDefiningPeriod] = useState<boolean>(false);
-  const [dragStart, setDragStart] = useState<string | null>(null);
-  const [previewRange, setPreviewRange] = useState<{ start: string; end: string } | null>(null);
+  const [dragStartX, setDragStartX] = useState<string | null>(null);
+  const [dragCurrentX, setDragCurrentX] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState<boolean>(false);
 
-  // Transform all periods to include IDs (unified system)
+  // Transform the ranges to include IDs
   const eventHighlights = React.useMemo(() => 
     eventRanges.map((range, index) => ({
-      id: range.source === 'auto' ? `auto${index + 1}` : `user${index + 1}`,
+      id: `event${index + 1}`,
       ...range
     })), [eventRanges]
   );
@@ -274,65 +274,6 @@ export default function Dashboard() {
     return endPrice > startPrice ? "up" : "down";
   };
 
-  // User-defined period selection functions
-  const handleChartMouseDown = (event: { activeLabel?: string }) => {
-    if (!isDefiningPeriod) return;
-    
-    const activeLabel = event?.activeLabel;
-    if (activeLabel) {
-      setDragStart(activeLabel);
-      setPreviewRange({ start: activeLabel, end: activeLabel });
-    }
-  };
-
-  const handleChartMouseMove = (event: { activeLabel?: string }) => {
-    if (!isDefiningPeriod || !dragStart) return;
-    
-    const activeLabel = event?.activeLabel;
-    if (activeLabel && activeLabel !== dragStart) {
-      // Ensure start is before end
-      const start = activeLabel < dragStart ? activeLabel : dragStart;
-      const end = activeLabel > dragStart ? activeLabel : dragStart;
-      setPreviewRange({ start, end });
-    }
-  };
-
-  const handleChartMouseUp = (event: { activeLabel?: string }) => {
-    if (!isDefiningPeriod || !dragStart || !previewRange) return;
-    
-    const activeLabel = event?.activeLabel;
-    if (activeLabel && activeLabel !== dragStart) {
-      // Create new user-defined range and add to unified system
-      const start = activeLabel < dragStart ? activeLabel : dragStart;
-      const end = activeLabel > dragStart ? activeLabel : dragStart;
-      
-      const newRange = {
-        start,
-        end,
-        source: 'user' as const
-      };
-      
-      // Add to existing ranges (unified system)
-      setEventRanges(prev => [...prev, newRange]);
-      console.log(`Created user-defined period: ${start} to ${end}`);
-      
-      // Show highlights if not already shown
-      setShowEventHighlights(true);
-    }
-    
-    // Reset drag state
-    setDragStart(null);
-    setPreviewRange(null);
-    setIsDefiningPeriod(false);
-  };
-
-  const togglePeriodDefinition = () => {
-    setIsDefiningPeriod(!isDefiningPeriod);
-    // Clear any ongoing drag state
-    setDragStart(null);
-    setPreviewRange(null);
-  };
-
   // Add this function to fetch unusual ranges
   const fetchUnusualRanges = useMemo(() => async () => {
     try {
@@ -372,16 +313,16 @@ export default function Dashboard() {
       const result = await response.json();
       console.log("Unusual ranges response:", result);
 
-      // Convert auto-generated ranges and add to unified system
+      // Convert each [start, end] to { start, end, type } and store in state
       if (Array.isArray(result.unusual_ranges)) {
-        const autoRanges = result.unusual_ranges.map(
+        const newRanges = result.unusual_ranges.map(
           (range: [string, string]) => ({
             start: range[0],
             end: range[1],
-            source: 'auto' as const
+            type: 'auto' as const
           })
         );
-        setEventRanges(autoRanges);  // This replaces ALL ranges (clears user-defined too, as per original logic)
+        setEventRanges(newRanges);
       }
 
       // Always show the highlights after fetching
@@ -435,6 +376,61 @@ export default function Dashboard() {
 
   // Add this near your other state declarations
   const [activeRequest, setActiveRequest] = useState<AbortController | null>(null);
+
+  // Click-and-drag handlers for user-defined periods
+  const handleChartMouseDown = (e: any) => {
+    if (!e || !e.activeLabel) return;
+    
+    setIsDefiningPeriod(true);
+    setIsDragging(true);
+    setDragStartX(e.activeLabel);
+    setDragCurrentX(e.activeLabel);
+  };
+
+  const handleChartMouseMove = (e: any) => {
+    if (isDragging && e && e.activeLabel) {
+      setDragCurrentX(e.activeLabel);
+    }
+  };
+
+  const handleChartMouseUp = (e: any) => {
+    if (isDragging && dragStartX && e && e.activeLabel) {
+      const endX = e.activeLabel;
+      
+      // Ensure start is before end
+      const start = dragStartX <= endX ? dragStartX : endX;
+      const end = dragStartX <= endX ? endX : dragStartX;
+      
+      // Only create period if there's a meaningful range (different dates)
+      if (start !== end) {
+        const newUserPeriod = {
+          start,
+          end,
+          type: 'user' as const
+        };
+        
+        // Add user-defined period to existing ranges
+        setEventRanges(prev => [...prev, newUserPeriod]);
+        setShowEventHighlights(true);
+      }
+    }
+    
+    // Reset drag state
+    setIsDefiningPeriod(false);
+    setIsDragging(false);
+    setDragStartX(null);
+    setDragCurrentX(null);
+  };
+
+  // Helper function to get current drag selection for display
+  const getCurrentDragSelection = () => {
+    if (!isDragging || !dragStartX || !dragCurrentX) return null;
+    
+    const start = dragStartX <= dragCurrentX ? dragStartX : dragCurrentX;
+    const end = dragStartX <= dragCurrentX ? dragCurrentX : dragStartX;
+    
+    return { start, end };
+  };
 
   // Update the handleEventClick function
   const handleEventClick = (eventId: string) => {
@@ -603,15 +599,6 @@ export default function Dashboard() {
                 <div className="flex-1 flex flex-col min-h-0 border-b">
                   <div className="p-6 flex flex-col flex-1 min-h-0 h-full">
                     <div className="flex-1 min-h-0">
-                      {/* Period definition mode indicator */}
-                      {isDefiningPeriod && (
-                        <div className="mb-2 p-2 bg-blue-50 border border-blue-200 rounded-md">
-                          <p className="text-sm text-blue-700 font-medium">
-                            📍 Click and drag on the chart to define a custom period for analysis
-                          </p>
-                        </div>
-                      )}
-                      
                       <div className="w-full h-full">
                         <ResponsiveContainer width="100%" height="100%">
                           <LineChart
@@ -665,55 +652,42 @@ export default function Dashboard() {
                               </pattern>
                             </defs>
                             <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                            {/* Preview range during drag selection */}
-                            {previewRange && (
+                            
+                            {/* User drag selection visualization */}
+                            {isDragging && getCurrentDragSelection() && (
                               <ReferenceArea
-                                key="preview"
-                                x1={previewRange.start}
-                                x2={previewRange.end}
-                                fill="#94a3b8"
+                                x1={getCurrentDragSelection()!.start}
+                                x2={getCurrentDragSelection()!.end}
+                                fill="#9ca3af"
                                 fillOpacity={0.3}
-                                stroke="#64748b"
+                                stroke="#6b7280"
                                 strokeWidth={2}
                                 strokeDasharray="5,5"
                               />
                             )}
                             
-                            {/* All periods (auto-generated + user-defined) */}
-                            {showEventHighlights && eventHighlights.map((highlight) => {
-                              const isSelected = highlight.id === selectedEventId;
-                              const isHovered = highlight.id === hoveredEvent;
-                              const trend = calculatePriceTrend(displayChartData, highlight.start, highlight.end);
-                              
-                              // Unified styling - same treatment for both auto and user-defined
-                              const fillColor = isSelected ? 
-                                `url(#${trend === "up" ? "diagonalPatternGreen" : "diagonalPatternRed"})` : 
-                                (trend === "up" ? "#22c55e66" : "#ef444466");
+                            {showEventHighlights && eventHighlights.map((event) => {
+                              const isSelected = event.id === selectedEventId;
+                              const isHovered = event.id === hoveredEvent;
                               
                               return (
                                 <ReferenceArea
-                                  key={highlight.id}
-                                  x1={highlight.start}
-                                  x2={highlight.end}
-                                  fill={fillColor}
+                                  key={event.id}
+                                  x1={event.start}
+                                  x2={event.end}
+                                  fill={isSelected ? 
+                                    `url(#${calculatePriceTrend(displayChartData, event.start, event.end) === "up" ? "diagonalPatternGreen" : "diagonalPatternRed"})` : 
+                                    (calculatePriceTrend(displayChartData, event.start, event.end) === "up" ? "#22c55e66" : "#ef444466")
+                                  }
                                   fillOpacity={isSelected ? 1 : (isHovered ? 0.6 : 0.4)}
-                                  onClick={() => { if (!isSelected && !isDefiningPeriod) handleEventClick(highlight.id); }}
-                                  onMouseEnter={(e) => { 
-                                    if (!isSelected && !isDefiningPeriod) { 
-                                      setHoveredEvent(highlight.id); 
-                                      setPopupPosition({ x: e.pageX, y: e.pageY }); 
-                                    }
-                                  }}
-                                  onMouseMove={(e) => { 
-                                    if (!isSelected && !isDefiningPeriod) setPopupPosition({ x: e.pageX, y: e.pageY }); 
-                                  }}
-                                  onMouseLeave={() => { 
-                                    if (!isSelected && !isDefiningPeriod) { 
-                                      setHoveredEvent(null); 
-                                      setPopupPosition(null); 
-                                    }
-                                  }}
-                                  style={{ cursor: isDefiningPeriod ? 'crosshair' : (isSelected ? 'default' : 'pointer') }}
+                                  stroke={event.type === 'user' ? '#3b82f6' : undefined}
+                                  strokeWidth={event.type === 'user' ? 2 : undefined}
+                                  strokeDasharray={event.type === 'user' ? '3,3' : undefined}
+                                  onClick={() => { if (!isSelected) handleEventClick(event.id); }}
+                                  onMouseEnter={(e) => { if (!isSelected) { setHoveredEvent(event.id); setPopupPosition({ x: e.pageX, y: e.pageY }); }}}
+                                  onMouseMove={(e) => { if (!isSelected) setPopupPosition({ x: e.pageX, y: e.pageY }); }}
+                                  onMouseLeave={() => { if (!isSelected) { setHoveredEvent(null); setPopupPosition(null); }}}
+                                  style={{ cursor: isSelected ? 'default' : 'pointer' }}
                                 />
                               );
                             })}
@@ -846,23 +820,10 @@ export default function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="flex gap-3">
-                          <Button onClick={handleEventAnalyzerClick} disabled={eventAnalyzerDisabled}>
-                            Event Analyzer
-                            <Radar className="ml-2 h-4 w-4" />
-                          </Button>
-                          
-                          <Button 
-                            onClick={togglePeriodDefinition}
-                            disabled={displayChartData.length === 0}
-                            variant={isDefiningPeriod ? "default" : "outline"}
-                          >
-                            {isDefiningPeriod ? "Cancel Selection" : "Define Period"}
-                            <svg className="ml-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 15l-2 5L9 9l11 4-5 2zm0 0l5 5M7.188 2.239l.777 2.897M5.136 7.965l-2.898-.777M13.95 4.05l-2.122 2.122m-5.657 5.656l-2.12 2.122" />
-                            </svg>
-                          </Button>
-                        </div>
+                        <Button onClick={handleEventAnalyzerClick} disabled={eventAnalyzerDisabled}>
+                          Event Analyzer
+                          <Radar className="ml-2 h-4 w-4" />
+                        </Button>
                       </div>
                     </div>
                   </div>
@@ -1126,6 +1087,9 @@ export default function Dashboard() {
                           left: 10,
                           bottom: 10,
                         }}
+                        onMouseDown={handleChartMouseDown}
+                        onMouseMove={handleChartMouseMove}
+                        onMouseUp={handleChartMouseUp}
                       >
                         <defs>
                           <pattern
@@ -1166,6 +1130,20 @@ export default function Dashboard() {
                           </pattern>
                         </defs>
                         <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                        
+                        {/* User drag selection visualization */}
+                        {isDragging && getCurrentDragSelection() && (
+                          <ReferenceArea
+                            x1={getCurrentDragSelection()!.start}
+                            x2={getCurrentDragSelection()!.end}
+                            fill="#9ca3af"
+                            fillOpacity={0.3}
+                            stroke="#6b7280"
+                            strokeWidth={2}
+                            strokeDasharray="5,5"
+                          />
+                        )}
+                        
                         {showEventHighlights && eventHighlights.map((event) => {
                           const isSelected = event.id === selectedEventId;
                           const isHovered = event.id === hoveredEvent;
@@ -1180,6 +1158,9 @@ export default function Dashboard() {
                                 (calculatePriceTrend(displayChartData, event.start, event.end) === "up" ? "#22c55e66" : "#ef444466")
                               }
                               fillOpacity={isSelected ? 1 : (isHovered ? 0.6 : 0.4)}
+                              stroke={event.type === 'user' ? '#3b82f6' : undefined}
+                              strokeWidth={event.type === 'user' ? 2 : undefined}
+                              strokeDasharray={event.type === 'user' ? '3,3' : undefined}
                               onClick={() => { if (!isSelected) handleEventClick(event.id); }}
                               onMouseEnter={(e) => { if (!isSelected) { setHoveredEvent(event.id); setPopupPosition({ x: e.pageX, y: e.pageY }); }}}
                               onMouseMove={(e) => { if (!isSelected) setPopupPosition({ x: e.pageX, y: e.pageY }); }}
