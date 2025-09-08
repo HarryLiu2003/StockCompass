@@ -114,7 +114,6 @@ export default function Dashboard() {
   const [popupPosition, setPopupPosition] = useState<{ x: number, y: number } | null>(null);
   
   // User-defined period selection state
-  const [isDefiningPeriod, setIsDefiningPeriod] = useState<boolean>(false);
   const [dragStartX, setDragStartX] = useState<string | null>(null);
   const [dragCurrentX, setDragCurrentX] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<boolean>(false);
@@ -378,22 +377,21 @@ export default function Dashboard() {
   const [activeRequest, setActiveRequest] = useState<AbortController | null>(null);
 
   // Click-and-drag handlers for user-defined periods
-  const handleChartMouseDown = (e: any) => {
+  const handleChartMouseDown = (e: { activeLabel?: string }) => {
     if (!e || !e.activeLabel) return;
     
-    setIsDefiningPeriod(true);
     setIsDragging(true);
     setDragStartX(e.activeLabel);
     setDragCurrentX(e.activeLabel);
   };
 
-  const handleChartMouseMove = (e: any) => {
+  const handleChartMouseMove = (e: { activeLabel?: string }) => {
     if (isDragging && e && e.activeLabel) {
       setDragCurrentX(e.activeLabel);
     }
   };
 
-  const handleChartMouseUp = (e: any) => {
+  const handleChartMouseUp = (e: { activeLabel?: string }) => {
     if (isDragging && dragStartX && e && e.activeLabel) {
       const endX = e.activeLabel;
       
@@ -416,7 +414,6 @@ export default function Dashboard() {
     }
     
     // Reset drag state
-    setIsDefiningPeriod(false);
     setIsDragging(false);
     setDragStartX(null);
     setDragCurrentX(null);
