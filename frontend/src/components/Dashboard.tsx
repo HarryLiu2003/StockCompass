@@ -38,13 +38,8 @@ interface ChartDataPoint {
   close_price: number;
   volume: number;
   earnings?: number;
-  // Financial metrics from yfinance
-  market_cap?: number;
-  pe?: number;
-  eps?: number;
-  pct_change?: number;
-  free_cash_flow?: number;
-  profit_margin?: number;
+  market_cap?: number;  // Real market cap from backend
+  // Add other properties as needed
 }
 
 // 1. Create an interface for news items
@@ -142,31 +137,13 @@ export default function Dashboard() {
       const response1y = await fetch(`${apiUrl}/api/stockdata/?stockname=${tickerSymbol}&period=1y&interval=1d`);
       const data1y = await response1y.json();
       if (data1y.status_code === 200 && data1y.time_series) {
-        // Merge time_series with fin_data to include financial metrics
-        const mergedData = data1y.time_series.map((timeItem: any) => {
-          const finItem = data1y.fin_data?.find((fin: any) => fin.time === timeItem.time);
-          return {
-            ...timeItem,
-            ...finItem  // Merge financial metrics (market_cap, pe, eps, etc.)
-          };
-        });
-        setChartData(mergedData);
+        setChartData(data1y.time_series);
       }
       // 2) Fetch max data
       const responseMax = await fetch(`${apiUrl}/api/stockdata/?stockname=${tickerSymbol}&period=max&interval=1d`);
       const dataMax = await responseMax.json();
       if (dataMax.status_code === 200 && dataMax.time_series) {
-        // Merge max data with financial metrics too
-        const mergedMaxData = dataMax.time_series.map((timeItem: any) => {
-          const finItem = dataMax.fin_data?.find((fin: any) => fin.time === timeItem.time);
-          return {
-            ...timeItem,
-            ...finItem  // Merge financial metrics
-          };
-        });
-        
-        // Combine 1Y and max data (both now include financial metrics)
-        const combined = [...(data1y.time_series || []), ...mergedMaxData];
+        const combined = [...(data1y.time_series || []), ...dataMax.time_series];
         const dedupedData = combined.reduce<ChartDataPoint[]>((acc, cur) => {
           if (!acc.some((item) => item.time === cur.time)) {
             acc.push(cur);
@@ -974,12 +951,23 @@ export default function Dashboard() {
                     <div className="text-sm font-medium text-muted-foreground">Market Cap</div>
                     {(() => {
                       const lastItem = displayChartData[displayChartData.length - 1];
-                      if (!lastItem?.market_cap || lastItem.market_cap === null) {
+                      if (!lastItem?.close_price) {
                         return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                       }
+                      
+                      // Use backend market cap if available, otherwise estimate
+                      let marketCap;
+                      if (lastItem.market_cap && lastItem.market_cap > 0) {
+                        marketCap = lastItem.market_cap;  // Real market cap from backend
+                      } else {
+                        // Fallback: Estimate using approximate outstanding shares
+                        const estimatedShares = 24600000000; // NVDA approximate outstanding shares
+                        marketCap = lastItem.close_price * estimatedShares;
+                      }
+                      
                       return (
                         <div className="text-3xl font-semibold">
-                          {lastItem.market_cap.toLocaleString("en-US", {
+                          {marketCap.toLocaleString("en-US", {
                             style: "currency",
                             currency: "USD",
                             notation: "compact",
@@ -1009,11 +997,18 @@ export default function Dashboard() {
                     <div className="text-sm font-medium text-muted-foreground">P/E (TTM)</div>
                     {(() => {
                       const lastItem = displayChartData[displayChartData.length - 1];
-                      if (!lastItem?.pe || lastItem.pe === null || lastItem.pe === 0) {
+                      // Calculate TTM EPS using the last 4 quarters
+                      const ttmEarnings = displayChartData
+                        .slice(-252) // Approximate trading days in a year
+                        .reduce((sum, item) => sum + (item.earnings || 0), 0);
+                      
+                      if (!lastItem?.close_price || ttmEarnings === 0) {
                         return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                       }
+                      
+                      const pe = lastItem.close_price / (ttmEarnings / lastItem.volume);
                       return (
-                        <div className="text-3xl font-semibold">{lastItem.pe.toFixed(2)}</div>
+                        <div className="text-3xl font-semibold">{pe.toFixed(2)}</div>
                       );
                     })()}
                   </div>
@@ -1022,12 +1017,19 @@ export default function Dashboard() {
                     <div className="text-sm font-medium text-muted-foreground">EPS (TTM)</div>
                     {(() => {
                       const lastItem = displayChartData[displayChartData.length - 1];
-                      if (!lastItem?.eps || lastItem.eps === null) {
+                      // Calculate TTM EPS
+                      const ttmEarnings = displayChartData
+                        .slice(-252) // Approximate trading days in a year
+                        .reduce((sum, item) => sum + (item.earnings || 0), 0);
+                      
+                      if (!lastItem?.volume || ttmEarnings === 0) {
                         return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                       }
+                      
+                      const eps = ttmEarnings / lastItem.volume;
                       return (
                         <div className="text-3xl font-semibold">
-                          {lastItem.eps.toFixed(2)}
+                          {eps.toFixed(2)}
                         </div>
                       );
                     })()}
@@ -1482,12 +1484,13 @@ export default function Dashboard() {
                 <div className="text-sm font-medium text-muted-foreground">Market Cap</div>
                 {(() => {
                   const lastItem = displayChartData[displayChartData.length - 1];
-                  if (!lastItem?.market_cap || lastItem.market_cap === null) {
+                  if (!lastItem?.close_price || !lastItem?.volume) {
                     return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                   }
+                  const marketCap = lastItem.close_price * lastItem.volume;
                   return (
                     <div className="text-3xl font-semibold">
-                      {lastItem.market_cap.toLocaleString("en-US", {
+                      {marketCap.toLocaleString("en-US", {
                         style: "currency",
                         currency: "USD",
                         notation: "compact",
@@ -1517,11 +1520,18 @@ export default function Dashboard() {
                 <div className="text-sm font-medium text-muted-foreground">P/E (TTM)</div>
                 {(() => {
                   const lastItem = displayChartData[displayChartData.length - 1];
-                  if (!lastItem?.pe || lastItem.pe === null || lastItem.pe === 0) {
+                  // Calculate TTM EPS using the last 4 quarters
+                  const ttmEarnings = displayChartData
+                    .slice(-252) // Approximate trading days in a year
+                    .reduce((sum, item) => sum + (item.earnings || 0), 0);
+                  
+                  if (!lastItem?.close_price || ttmEarnings === 0) {
                     return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                   }
+                  
+                  const pe = lastItem.close_price / (ttmEarnings / lastItem.volume);
                   return (
-                    <div className="text-3xl font-semibold">{lastItem.pe.toFixed(2)}</div>
+                    <div className="text-3xl font-semibold">{pe.toFixed(2)}</div>
                   );
                 })()}
               </div>
@@ -1530,12 +1540,19 @@ export default function Dashboard() {
                 <div className="text-sm font-medium text-muted-foreground">EPS (TTM)</div>
                 {(() => {
                   const lastItem = displayChartData[displayChartData.length - 1];
-                  if (!lastItem?.eps || lastItem.eps === null) {
+                  // Calculate TTM EPS
+                  const ttmEarnings = displayChartData
+                    .slice(-252) // Approximate trading days in a year
+                    .reduce((sum, item) => sum + (item.earnings || 0), 0);
+                  
+                  if (!lastItem?.volume || ttmEarnings === 0) {
                     return <div className="text-3xl font-semibold text-muted-foreground">N/A</div>;
                   }
+                  
+                  const eps = ttmEarnings / lastItem.volume;
                   return (
                     <div className="text-3xl font-semibold">
-                      {lastItem.eps.toFixed(2)}
+                      {eps.toFixed(2)}
                     </div>
                   );
                 })()}

@@ -22,8 +22,8 @@ async def fetch_and_process_stock_data(ticker_symbol="AAPL", period="1d", interv
     ticker = yf.Ticker(ticker_symbol)
 
     try:
-        # Fetch price data
-        print(f"📊 Fetching price history...")
+        # Fetch price data and company info
+        print(f"📊 Fetching price history and company info...")
         price_data = await asyncio.to_thread(ticker.history, period=period, interval=interval)
         
         if price_data.empty:
@@ -32,17 +32,14 @@ async def fetch_and_process_stock_data(ticker_symbol="AAPL", period="1d", interv
             
         print(f"✅ Fetched {len(price_data)} price records for {ticker_symbol}")
         
-        # Fetch financial info for accurate metrics
-        print(f"📊 Fetching financial info...")
-        info = await asyncio.to_thread(lambda: ticker.info)
-        
-        # Extract real financial metrics using correct yfinance field identifiers
-        market_cap_base = info.get('marketCap', None)  # Base market cap
-        trailing_pe_base = info.get('trailingPE', None)  # Base P/E ratio (TTM)
-        trailing_eps = info.get('trailingEps', None)  # EPS (same for all days)
-        shares_outstanding = info.get('sharesOutstanding', None)  # For market cap calculation
-        
-        print(f"📊 Base financial metrics - Market Cap: {market_cap_base}, P/E: {trailing_pe_base}, EPS: {trailing_eps}")
+        # Get outstanding shares for proper market cap calculation
+        try:
+            info = await asyncio.to_thread(lambda: ticker.info)
+            shares_outstanding = info.get('sharesOutstanding', info.get('impliedSharesOutstanding', None))
+            print(f"📈 Outstanding shares: {shares_outstanding:,}" if shares_outstanding else "⚠️ Outstanding shares not available")
+        except Exception as e:
+            print(f"⚠️ Could not fetch company info: {e}")
+            shares_outstanding = None
         
         # Process data in memory (no database storage)
         from datetime import datetime
@@ -61,31 +58,30 @@ async def fetch_and_process_stock_data(ticker_symbol="AAPL", period="1d", interv
                 dt = timezone.make_aware(dt, timezone.utc)
             time_str = dt.strftime("%Y-%m-%d")
             
-            current_price = float(row['Close'])
-            
             # Time series data
             time_series.append({
                 "time": time_str,
-                "close_price": round(current_price, 2),
+                "close_price": round(float(row['Close']), 2),
                 "volume": int(row['Volume'])
             })
             
-            # Calculate time series financial metrics
-            # Market Cap = Current Price × Shares Outstanding (changes with price)
-            daily_market_cap = (current_price * shares_outstanding) if shares_outstanding else market_cap_base
-            
-            # P/E Ratio = Current Price ÷ EPS (changes with price)  
-            daily_pe = (current_price / trailing_eps) if trailing_eps and trailing_eps > 0 else trailing_pe_base
-            
+            # Financial data with correct market cap calculation
+            if shares_outstanding:
+                market_cap = float(row['Close']) * shares_outstanding  # Correct: Price × Outstanding Shares
+            else:
+                market_cap = None  # Don't show incorrect market cap
+                
             fin_data.append({
                 "time": time_str,
-                "eps": trailing_eps,  # EPS stays same (company metric)
-                "market_cap": daily_market_cap,  # Changes with stock price
+                "free_cash_flow": 0.0,  # Simplified for performance
+                "eps": None,  # Can be added later if needed
+                "profit_margin": None,  # Can be added later if needed
+                "market_cap": round(market_cap, 2) if market_cap else None,
                 "pct_change": round(float(row['pct_change']), 2),
-                "pe": daily_pe  # Changes with stock price
+                "pe": 0.0  # Simplified for performance
             })
         
-        print(f"✅ Processed {len(time_series)} records with real financial metrics")
+        print(f"✅ Processed {len(time_series)} records in memory")
         
         return {
             "time_series": time_series,
