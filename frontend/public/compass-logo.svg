@@ -1,0 +1,16 @@
+<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Compass circle -->
+  <circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="1.5" fill="none"/>
+  
+  <!-- Compass needle pointing North -->
+  <path d="M12 2 L14 8 L12 6 L10 8 Z" fill="currentColor"/>
+  
+  <!-- Compass center -->
+  <circle cx="12" cy="12" r="1.5" fill="currentColor"/>
+  
+  <!-- Cardinal directions -->
+  <text x="12" y="5" text-anchor="middle" font-size="8" font-weight="bold" fill="currentColor">N</text>
+  <text x="19" y="13" text-anchor="middle" font-size="8" font-weight="bold" fill="currentColor">E</text>
+  <text x="12" y="21" text-anchor="middle" font-size="8" font-weight="bold" fill="currentColor">S</text>
+  <text x="5" y="13" text-anchor="middle" font-size="8" font-weight="bold" fill="currentColor">W</text>
+</svg>
