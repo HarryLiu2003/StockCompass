@@ -436,17 +436,12 @@ export default function Dashboard() {
     return { start, end };
   };
 
-  // Initialize reasoning steps based on actual AI pipeline
+  // Initialize reasoning steps matching REAL backend events
   const initializeReasoningSteps = () => {
     const steps = [
-      { id: 'serpapi_search', text: 'Searching Google News with SerpAPI for financial articles', status: 'pending' as const },
-      { id: 'date_filtering', text: `Filtering articles from ${clickedEvent?.start} to ${clickedEvent?.end}`, status: 'pending' as const },
-      { id: 'content_extraction', text: 'Extracting article titles, snippets, and source links', status: 'pending' as const },
-      { id: 'financial_filtering', text: 'Identifying financially relevant news events', status: 'pending' as const },
+      { id: 'serpapi_search', text: `Searching Google News for ${ticker} financial articles`, status: 'pending' as const },
       { id: 'claude_analysis', text: 'Analyzing market impact with Claude Sonnet 4', status: 'pending' as const },
-      { id: 'correlation_analysis', text: 'Correlating news events with stock price movements', status: 'pending' as const },
-      { id: 'explanation_synthesis', text: 'Generating comprehensive explanations and insights', status: 'pending' as const },
-      { id: 'reference_validation', text: 'Validating and organizing source references', status: 'pending' as const }
+      { id: 'json_processing', text: 'Processing and validating analysis results', status: 'pending' as const }
     ];
     setReasoningSteps(steps);
     return steps;
@@ -461,43 +456,86 @@ export default function Dashboard() {
     );
   };
 
-  // Enhanced AI reasoning progress with realistic backend timing
-  const simulateReasoningProgress = async () => {
+  // Real-time AI reasoning progress using Server-Sent Events
+  const trackRealTimeProgress = (stockname: string, start: string, end: string) => {
     const steps = initializeReasoningSteps();
     
-    // Step 1-4: SerpAPI Processing (fast, parallel-ish)
-    updateReasoningStep('serpapi_search', 'running');
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    updateReasoningStep('serpapi_search', 'completed');
+    // Connect to Server-Sent Events endpoint for real backend progress
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+    const eventSource = new EventSource(
+      `${apiUrl}/api/news/stream/?stockname=${stockname}&start=${start}&end=${end}`
+    );
     
-    updateReasoningStep('date_filtering', 'running');
-    await new Promise(resolve => setTimeout(resolve, 600));
-    updateReasoningStep('date_filtering', 'completed');
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        switch (data.step) {
+          case 'connected':
+            console.log('Connected to real-time AI analysis stream');
+            break;
+            
+          case 'serpapi_search':
+            if (data.status === 'running') {
+              updateReasoningStep('serpapi_search', 'running');
+            } else if (data.status === 'completed') {
+              updateReasoningStep('serpapi_search', 'completed');
+            }
+            break;
+            
+          case 'claude_analysis':
+            if (data.status === 'running') {
+              updateReasoningStep('claude_analysis', 'running');
+            } else if (data.status === 'completed') {
+              updateReasoningStep('claude_analysis', 'completed');
+            }
+            break;
+            
+          case 'json_processing':
+            if (data.status === 'running') {
+              updateReasoningStep('json_processing', 'running');
+            } else if (data.status === 'completed') {
+              updateReasoningStep('json_processing', 'completed');
+            }
+            break;
+            
+          case 'complete':
+            // Parse and set the final result
+            try {
+              const result = JSON.parse(data.result);
+              setNewsDetails(result);
+              setIsNewsLoading(false);
+              setReasoningSteps([]);
+            } catch (parseError) {
+              console.error('Error parsing final result:', parseError);
+              setIsNewsLoading(false);
+            }
+            eventSource.close();
+            break;
+            
+          case 'error':
+            console.error('Analysis error:', data.message);
+            setReasoningSteps(prev => 
+              prev.map(step => 
+                step.status === 'running' ? { ...step, status: 'error' as const } : step
+              )
+            );
+            setIsNewsLoading(false);
+            eventSource.close();
+            break;
+        }
+      } catch (parseError) {
+        console.error('Error parsing SSE data:', parseError);
+      }
+    };
     
-    updateReasoningStep('content_extraction', 'running');
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    updateReasoningStep('content_extraction', 'completed');
+    eventSource.onerror = (error) => {
+      console.error('SSE connection error:', error);
+      eventSource.close();
+      setIsNewsLoading(false);
+    };
     
-    updateReasoningStep('financial_filtering', 'running');
-    await new Promise(resolve => setTimeout(resolve, 800));
-    updateReasoningStep('financial_filtering', 'completed');
-    
-    // Step 5-8: Claude Analysis (longer, sequential)
-    updateReasoningStep('claude_analysis', 'running');
-    await new Promise(resolve => setTimeout(resolve, 10000)); // Claude's main processing
-    updateReasoningStep('claude_analysis', 'completed');
-    
-    updateReasoningStep('correlation_analysis', 'running');
-    await new Promise(resolve => setTimeout(resolve, 1800));
-    updateReasoningStep('correlation_analysis', 'completed');
-    
-    updateReasoningStep('explanation_synthesis', 'running');
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    updateReasoningStep('explanation_synthesis', 'completed');
-    
-    updateReasoningStep('reference_validation', 'running');
-    await new Promise(resolve => setTimeout(resolve, 800));
-    updateReasoningStep('reference_validation', 'completed');
+    return eventSource;
   };
 
   // Update the handleEventClick function
@@ -524,46 +562,11 @@ export default function Dashboard() {
     setPopupPosition(null);
     setHoveredEvent(null);
 
-    // Start reasoning steps display
-    simulateReasoningProgress();
-
-    // Create new AbortController for this request
-    const controller = new AbortController();
-    setActiveRequest(controller);
-
-    // Fetch news data for the selected event
-    fetchNewsData(
-        ticker, 
-        "max", 
-        "1d", 
-        clickedEvent.start, 
-        clickedEvent.end,
-        controller.signal
-    )
-        .then(fetchedNews => {
-            setNewsDetails(fetchedNews);
-            setIsNewsLoading(false);
-            // Clear reasoning steps when analysis is complete
-            setReasoningSteps([]);
-        })
-        .catch(err => {
-            if (err.name !== 'AbortError') {
-                console.error("Failed to fetch news data:", err);
-                setNewsDetails(null);
-                setIsNewsLoading(false);
-                // Mark current step as error
-                setReasoningSteps(prev => 
-                  prev.map(step => 
-                    step.status === 'running' ? { ...step, status: 'error' as const } : step
-                  )
-                );
-            }
-        })
-        .finally(() => {
-            setActiveRequest(prev => 
-                prev?.signal === controller.signal ? null : prev
-            );
-        });
+    // Start real-time progress tracking with Server-Sent Events
+    const eventSource = trackRealTimeProgress(ticker, clickedEvent.start, clickedEvent.end);
+    
+    // Store event source for cleanup
+    setActiveRequest({ abort: () => eventSource.close() } as AbortController);
   };
 
   // 2. Update the state definition with proper typing and prefix
