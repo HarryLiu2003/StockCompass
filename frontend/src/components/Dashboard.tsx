@@ -578,6 +578,23 @@ export default function Dashboard() {
   // 2. Update the state definition with proper typing and prefix
   const [_mappedNewsItems, _setMappedNewsItems] = useState<NewsItem[]>([]);
 
+  // Mobile detection state
+  const [isMobile, setIsMobile] = useState<boolean>(false);
+
+  // Check for mobile device
+  useEffect(() => {
+    const checkMobile = () => {
+      const width = window.innerWidth;
+      const userAgent = navigator.userAgent;
+      const isMobileDevice = width <= 768 || /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(userAgent);
+      setIsMobile(isMobileDevice);
+    };
+
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Add cleanup effect
   useEffect(() => {
     if (activeRequest) {
@@ -595,7 +612,7 @@ export default function Dashboard() {
             <div className="flex items-center gap-2">
               <div className="text-primary h-6 w-6">
                 <Image
-                  src="/logo.svg"
+                  src="/logo.png"
                   alt="StockCompass Logo"
                   width={24}
                   height={24}
@@ -637,6 +654,53 @@ export default function Dashboard() {
       </header>
 
       <main className="flex-1 flex p-8 gap-4 h-[calc(100vh-4rem)] overflow-hidden">
+        {isMobile ? (
+          // Mobile device - show desktop prompt
+          <div className="flex-1 flex items-center justify-center">
+            <div className="text-center max-w-md px-6">
+              <div className="mb-6">
+                <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mb-4">
+                  <svg 
+                    width="32" 
+                    height="32" 
+                    viewBox="0 0 24 24" 
+                    fill="none" 
+                    stroke="currentColor" 
+                    strokeWidth="2"
+                    className="text-primary"
+                  >
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+                    <line x1="8" y1="21" x2="16" y2="21"/>
+                    <line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                </div>
+              </div>
+              
+              <h2 className="text-2xl font-bold text-foreground mb-4">
+                Desktop Experience Required
+              </h2>
+              
+              <p className="text-muted-foreground mb-6 leading-relaxed">
+                StockCompass provides advanced financial analysis with interactive charts, AI-powered insights, and detailed market data visualization.
+              </p>
+              
+              <p className="text-muted-foreground mb-8 leading-relaxed">
+                For the best experience with complex financial charts and analysis tools, please access StockCompass from a desktop or laptop computer.
+              </p>
+              
+              <div className="bg-muted/50 rounded-lg p-4">
+                <p className="text-sm text-muted-foreground">
+                  <strong className="text-foreground">Features requiring desktop:</strong><br/>
+                  • Interactive stock charts with drag-to-select periods<br/>
+                  • AI-powered volatility analysis<br/>
+                  • Multi-panel financial data visualization<br/>
+                  • Advanced time-series controls
+                </p>
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Desktop - show full application
         {selectedInterval ? (
           <div className="flex flex-1 gap-5 h-full">
             <div className={`transition-all duration-200 ${newsPanelActive ? 'flex-1' : 'w-full'}`}>
@@ -1564,6 +1628,7 @@ export default function Dashboard() {
               </div>
             )}
           </Card>
+        )}
         )}
       </main>
       {popupPosition && (hoveredEvent || hoveredInterval) && (
