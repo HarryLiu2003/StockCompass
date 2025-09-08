@@ -32,6 +32,18 @@ async def fetch_and_process_stock_data(ticker_symbol="AAPL", period="1d", interv
             
         print(f"✅ Fetched {len(price_data)} price records for {ticker_symbol}")
         
+        # Fetch financial info for accurate metrics
+        print(f"📊 Fetching financial info...")
+        info = await asyncio.to_thread(lambda: ticker.info)
+        
+        # Extract real financial metrics using correct yfinance field identifiers
+        market_cap = info.get('marketCap', None)  # Real market cap from yfinance
+        trailing_pe = info.get('trailingPE', None)  # Real P/E ratio (TTM)
+        trailing_eps = info.get('trailingEps', None)  # Real EPS (TTM)
+        beta = info.get('beta', None)  # Beta (5Y Monthly) - available but not displayed
+        
+        print(f"📊 Financial metrics - Market Cap: {market_cap}, P/E: {trailing_pe}, EPS: {trailing_eps}")
+        
         # Process data in memory (no database storage)
         from datetime import datetime
         from django.utils import timezone
@@ -56,19 +68,18 @@ async def fetch_and_process_stock_data(ticker_symbol="AAPL", period="1d", interv
                 "volume": int(row['Volume'])
             })
             
-            # Financial data  
-            market_cap = float(row['Close']) * int(row['Volume'])
+            # Financial data with REAL metrics from yfinance
             fin_data.append({
                 "time": time_str,
                 "free_cash_flow": 0.0,  # Simplified for performance
-                "eps": None,  # Can be added later if needed
+                "eps": trailing_eps,  # Real EPS from ticker.info
                 "profit_margin": None,  # Can be added later if needed
-                "market_cap": round(market_cap, 2),
+                "market_cap": market_cap,  # Real market cap from ticker.info
                 "pct_change": round(float(row['pct_change']), 2),
-                "pe": 0.0  # Simplified for performance
+                "pe": trailing_pe  # Real P/E from ticker.info
             })
         
-        print(f"✅ Processed {len(time_series)} records in memory")
+        print(f"✅ Processed {len(time_series)} records with real financial metrics")
         
         return {
             "time_series": time_series,

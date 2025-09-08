@@ -456,7 +456,7 @@ export default function Dashboard() {
       if (completedStepId === 'serpapi_search') {
         updated.push({ 
           id: 'claude_analysis', 
-          text: 'Analyzing market impact with Claude Sonnet 4', 
+          text: 'Analyzing market impact with advanced AI', 
           status: 'running' as const 
         });
       } else if (completedStepId === 'claude_analysis') {
@@ -512,10 +512,10 @@ export default function Dashboard() {
       addNextReasoningStep('serpapi_search'); // Complete step 1, add step 2
     }, 3000); // 3 seconds for SerpAPI search
     
-    // Simulate Claude analysis start after SerpAPI
+    // Simulate AI analysis start after SerpAPI
     const claudeTimer = setTimeout(() => {
       addNextReasoningStep('claude_analysis'); // Complete step 2, add step 3
-    }, 15000); // 15 seconds total (3s SerpAPI + 12s Claude)
+    }, 15000); // 15 seconds total (3s SerpAPI + 12s AI analysis)
     
     // Make the actual API call
     fetch(`${apiUrl}/api/news/?stockname=${ticker}&start=${clickedEvent.start}&end=${clickedEvent.end}`, {
@@ -529,7 +529,7 @@ export default function Dashboard() {
         
         if (data.status_code === 200 && data.complex) {
           try {
-            // Parse the Claude analysis
+            // Parse the AI analysis
             let complexString = data.complex;
             if (complexString.startsWith('```json')) {
               complexString = complexString.replace(/^```json\n/, '').replace(/\n```$/, '');
@@ -1074,7 +1074,7 @@ export default function Dashboard() {
                         <div className="mb-4">
                           <h3 className="text-lg font-semibold mb-2">AI Analysis in Progress</h3>
                           <p className="text-sm text-muted-foreground">
-                            Analyzing market volatility with Claude Sonnet 4 and real-time news data
+                            Analyzing market volatility with advanced AI and real-time news data
                           </p>
                         </div>
                         
