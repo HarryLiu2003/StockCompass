@@ -14,9 +14,11 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "StockCompass",
-  description: "Your stock analysis dashboard",
+  description: "AI-powered stock analysis and volatility insights",
   icons: {
-    icon: "/favicon.ico",
+    icon: "/logo.svg",
+    shortcut: "/logo.svg",
+    apple: "/logo.svg",
   },
 };
 

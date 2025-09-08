@@ -593,9 +593,9 @@ export default function Dashboard() {
         <div className="flex h-16 items-center justify-between px-8">
           <div className="flex items-center gap-6">
             <div className="flex items-center gap-2">
-              <div className="text-primary">
+              <div className="text-primary h-6 w-6">
                 <Image
-                  src="/Logo.svg"
+                  src="/logo.svg"
                   alt="StockCompass Logo"
                   width={24}
                   height={24}
