@@ -5,9 +5,6 @@ from asgiref.sync import async_to_sync
 from rest_framework.decorators import api_view, renderer_classes
 from rest_framework.response import Response
 from rest_framework.renderers import JSONRenderer
-from django.http import StreamingHttpResponse
-import json
-import time
 
 @api_view(['GET'])
 @renderer_classes([JSONRenderer])

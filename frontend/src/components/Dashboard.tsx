@@ -446,14 +446,6 @@ export default function Dashboard() {
     return steps;
   };
 
-  // Update reasoning step status
-  const updateReasoningStep = (stepId: string, status: 'running' | 'completed' | 'error') => {
-    setReasoningSteps(prev => 
-      prev.map(step => 
-        step.id === stepId ? { ...step, status } : step
-      )
-    );
-  };
 
 
   // Update the handleEventClick function
@@ -502,7 +494,7 @@ export default function Dashboard() {
         }
         return prev;
       });
-    }, 3000); // Update every 3 seconds
+    }, 4000); // Update every 4 seconds (realistic timing)
     
     // Create AbortController for the actual API call
     const controller = new AbortController();
