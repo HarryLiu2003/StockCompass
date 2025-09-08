@@ -110,6 +110,106 @@ if __name__ == "__main__":
 # Example usage:
 # python message.py --api_key_1 YOUR_PERPLEXITY_KEY --api_key_2 YOUR_OPENAI_KEY --stock AAPL --start "2022-01-01" --end "2022-01-31"
 
+def serpapi_news_search(api_key, stock, start_date, end_date):
+    """
+    Stateless news search using SerpAPI.
+    Returns news data without database storage.
+    """
+    url = "https://serpapi.com/search"
+    query = f"{stock} stock earnings financial news"
+    
+    # Convert to Google's date format (MM/DD/YYYY)
+    start_parts = start_date.split('-')
+    end_parts = end_date.split('-')
+    start_formatted = f"{start_parts[1]}/{start_parts[2]}/{start_parts[0]}"
+    end_formatted = f"{end_parts[1]}/{end_parts[2]}/{end_parts[0]}"
+    
+    params = {
+        "engine": "google",
+        "q": query,
+        "tbm": "nws",
+        "api_key": api_key,
+        "num": 10,
+        "hl": "en",
+        "gl": "us",
+        "tbs": f"cdr:1,cd_min:{start_formatted},cd_max:{end_formatted}",
+        "sort": "date"
+    }
+    
+    try:
+        response = requests.get(url, params=params)
+        data = response.json()
+        
+        if "news_results" in data:
+            content = []
+            citations = []
+            
+            for article in data["news_results"]:
+                title = article.get("title", "")
+                snippet = article.get("snippet", "")
+                link = article.get("link", "")
+                source = article.get("source", "")
+                date = article.get("date", "")
+                
+                if title and snippet:
+                    content.append(f"{title}: {snippet} (Source: {source}, Date: {date})")
+                if link:
+                    citations.append(link)
+            
+            return {"citations": citations, "content": content}
+        else:
+            return {"citations": [], "content": []}
+            
+    except Exception as e:
+        print(f"SerpAPI error: {e}")
+        return {"citations": [], "content": []}
+
+def api_enhancement_request_claude(api_key, stock, start, end, explanations, references):
+    """
+    Stateless Claude Sonnet 4 enhancement.
+    No database storage - pure processing.
+    """
+    from anthropic import Anthropic
+    
+    client = Anthropic(api_key=api_key)
+    
+    system_prompt = """You are a financial analyst. Analyze and enhance stock performance explanations. 
+    Return valid JSON: {"explanations": [], "reasons": [], "references": [], "text_summary": ""}"""
+    
+    user_prompt = f"""Analyze {stock} performance during {start} to {end}.
+    Explanations: {explanations}
+    References: {references}"""
+
+    try:
+        response = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=2000,
+            temperature=0.1,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_prompt}]
+        )
+        return response.content[0].text
+    except Exception as e:
+        print(f"Claude API error: {e}")
+        return '{"explanations": [], "reasons": [], "references": [], "text_summary": "Error processing analysis"}'
+
+def generate_data_claude_serpapi_stateless(serpapi_key, claude_key, stock, start, end):
+    """
+    Stateless news analysis using SerpAPI + Claude.
+    No database storage - pure in-memory processing.
+    """
+    # Step 1: Get news from SerpAPI
+    news_data = serpapi_news_search(serpapi_key, stock, start, end)
+    
+    # Step 2: Enhance with Claude
+    enhanced_analysis = api_enhancement_request_claude(
+        claude_key, stock, start, end,
+        news_data['content'], 
+        news_data['citations']
+    )
+    
+    return enhanced_analysis
+
 def validate_news_item(data):
     required_fields = ['title', 'url']
     for field in required_fields:

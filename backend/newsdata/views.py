@@ -1,5 +1,5 @@
 from django.http import JsonResponse
-from .message import generate_data_openai
+from .message import generate_data_openai, generate_data_claude_serpapi_stateless
 from django.conf import settings
 from asgiref.sync import async_to_sync
 from rest_framework.decorators import api_view, renderer_classes
@@ -18,20 +18,33 @@ def news_api(request):
         start = start.replace('"', '')
         end = end.replace('"', '')
         
-        # Use available API configuration
-        if not settings.API_PER or not settings.API_OPENAI:
+        # Use Claude + SerpAPI (preferred) or fallback to OpenAI + Perplexity
+        api_claude = getattr(settings, 'API_CLAUDE', None)
+        serpapi_key = getattr(settings, 'SERPAPI_KEY', None)
+        
+        if api_claude and serpapi_key:
+            # Use Claude Sonnet 4 + SerpAPI (stateless)
+            complex_res = generate_data_claude_serpapi_stateless(
+                serpapi_key,
+                api_claude,
+                stockname,
+                start,
+                end
+            )
+        elif settings.API_PER and settings.API_OPENAI:
+            # Fallback to OpenAI + Perplexity
+            complex_res = generate_data_openai(
+                settings.API_PER,
+                settings.API_OPENAI,
+                stockname,
+                start,
+                end
+            )
+        else:
             return Response({
                 "status_code": 500,
-                "error": "API keys not configured"
+                "error": "No AI API keys configured (need Claude+SerpAPI or OpenAI+Perplexity)"
             }, status=500)
-        
-        complex_res = generate_data_openai(
-            settings.API_PER,
-            settings.API_OPENAI,
-            stockname,
-            start,
-            end
-        )
         
         response_data = {
             "status_code": 200,
