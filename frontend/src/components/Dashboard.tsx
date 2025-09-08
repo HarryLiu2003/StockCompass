@@ -38,7 +38,13 @@ interface ChartDataPoint {
   close_price: number;
   volume: number;
   earnings?: number;
-  // Add other properties as needed
+  // Financial metrics from yfinance
+  market_cap?: number;
+  pe?: number;
+  eps?: number;
+  pct_change?: number;
+  free_cash_flow?: number;
+  profit_margin?: number;
 }
 
 // 1. Create an interface for news items
@@ -136,13 +142,31 @@ export default function Dashboard() {
       const response1y = await fetch(`${apiUrl}/api/stockdata/?stockname=${tickerSymbol}&period=1y&interval=1d`);
       const data1y = await response1y.json();
       if (data1y.status_code === 200 && data1y.time_series) {
-        setChartData(data1y.time_series);
+        // Merge time_series with fin_data to include financial metrics
+        const mergedData = data1y.time_series.map((timeItem: any) => {
+          const finItem = data1y.fin_data?.find((fin: any) => fin.time === timeItem.time);
+          return {
+            ...timeItem,
+            ...finItem  // Merge financial metrics (market_cap, pe, eps, etc.)
+          };
+        });
+        setChartData(mergedData);
       }
       // 2) Fetch max data
       const responseMax = await fetch(`${apiUrl}/api/stockdata/?stockname=${tickerSymbol}&period=max&interval=1d`);
       const dataMax = await responseMax.json();
       if (dataMax.status_code === 200 && dataMax.time_series) {
-        const combined = [...(data1y.time_series || []), ...dataMax.time_series];
+        // Merge max data with financial metrics too
+        const mergedMaxData = dataMax.time_series.map((timeItem: any) => {
+          const finItem = dataMax.fin_data?.find((fin: any) => fin.time === timeItem.time);
+          return {
+            ...timeItem,
+            ...finItem  // Merge financial metrics
+          };
+        });
+        
+        // Combine 1Y and max data (both now include financial metrics)
+        const combined = [...(data1y.time_series || []), ...mergedMaxData];
         const dedupedData = combined.reduce<ChartDataPoint[]>((acc, cur) => {
           if (!acc.some((item) => item.time === cur.time)) {
             acc.push(cur);
