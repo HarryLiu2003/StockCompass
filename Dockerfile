@@ -12,12 +12,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Create staticfiles directory
 RUN mkdir -p /app/staticfiles
 
-# Start command for production
-CMD python manage.py migrate && \
-    python manage.py collectstatic --noinput && \
-    gunicorn --bind 0.0.0.0:${PORT:-8080} \
-             --workers 2 \
-             --timeout 60 \
-             --max-requests 1000 \
-             --max-requests-jitter 100 \
-             stockcompass.wsgi:application
+# Make start.sh executable
+RUN chmod +x /app/start.sh
+
+# Use start.sh as entrypoint
+CMD ["/app/start.sh"]

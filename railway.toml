@@ -1,4 +1,7 @@
 [build]
 builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
-# Use Dockerfile CMD - no custom startCommand needed
+[deploy]
+# Let Dockerfile CMD handle the start command
+# No custom startCommand needed - Railway will use Dockerfile's CMD
